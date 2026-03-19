@@ -17,7 +17,7 @@ local dbDefaults = {
 }
 
 function addon:OnInitialize()
-    TPP.db = LibStub("AceDB-3.0"):New("TimePlayedPlusDB", dbDefaults, true)
+    TPP.db = LibStub("AceDB-3.0"):New("TimePlayed_PlusDB", dbDefaults, true)
 
     -- recover any pending session from a UI reload
     TPP.Data.RecoverPendingSession(TPP.db)

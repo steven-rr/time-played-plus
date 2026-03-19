@@ -13,7 +13,7 @@ local scrollOffset = 0
 local cachedSessions = {}
 
 function HistoryUI.Create()
-    historyFrame = Utils.CreateStyledFrame("TimePlayedPlusHistoryFrame", 520, 240)
+    historyFrame = Utils.CreateStyledFrame("TimePlayed_PlusHistoryFrame", 520, 240)
 
     local title = Utils.CreateFontString(historyFrame, 11, "TOP", historyFrame, "TOP", 0, -12)
     title:SetText("Session History")

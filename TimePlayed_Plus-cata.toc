@@ -1,0 +1,10 @@
+## Interface: 40402
+## Title: TimePlayed_Plus
+## Notes: A lightweight addon that tracks how long you actually play each session, with stats and history across all your characters.
+## Author: stevenrivadeneira
+## Version: 1.0.0
+## SavedVariables: TimePlayed_PlusDB
+## License: MIT
+
+Libs/libs.xml
+Core/core.xml

@@ -9,7 +9,7 @@ local Data = TPP.Data
 local statsFrame, avgText, recentAvgText, todayText
 
 function StatsUI.Create()
-    statsFrame = Utils.CreateStyledFrame("TimePlayedPlusStatsFrame", 300, 160)
+    statsFrame = Utils.CreateStyledFrame("TimePlayed_PlusStatsFrame", 300, 160)
 
     local title = Utils.CreateFontString(statsFrame, 11, "TOP", statsFrame, "TOP", 0, -12)
     title:SetText("Playtime Stats")
