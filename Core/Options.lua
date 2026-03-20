@@ -38,6 +38,25 @@ function Options.GetOptionsTable()
                     end
                 end,
             },
+            dataSpacer = {
+                type = "header",
+                name = "Data",
+                order = 10,
+            },
+            deleteHistory = {
+                type = "execute",
+                name = "Delete All Session History",
+                desc = "Permanently delete all recorded sessions for every character",
+                order = 11,
+                confirm = true,
+                confirmText = "Are you sure? This will delete all session history for ALL characters and cannot be undone.",
+                func = function()
+                    TPP.db.global.sessions = {}
+                    if TPP.HistoryUI.Refresh then TPP.HistoryUI.Refresh() end
+                    if TPP.StatsUI.Refresh then TPP.StatsUI.Refresh() end
+                    print("|cffffd100TimePlayed+|r: Session history cleared.")
+                end,
+            },
         },
     }
 end
