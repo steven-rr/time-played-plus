@@ -9,12 +9,12 @@ local Data = TPP.Data
 local mainFrame, timeText, charCheckbox
 
 function MainUI.Create()
-    mainFrame = Utils.CreateStyledFrame("TimePlayed_PlusMainFrame", 260, 200)
+    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 200)
     mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
 
     -- title
     local title = Utils.CreateFontString(mainFrame, 11, "TOP", mainFrame, "TOP", 0, -12)
-    title:SetText("TimePlayed_Plus")
+    title:SetText("TimePlayed+")
     title:SetTextColor(1, 0.82, 0)
 
     -- label
@@ -89,7 +89,7 @@ end
 
 function MainUI.ShowCSV()
     if not TPP.csvFrame then
-        TPP.csvFrame = Utils.CreateStyledFrame("TimePlayed_PlusCSVFrame", 620, 220)
+        TPP.csvFrame = Utils.CreateStyledFrame("TimePlayed+CSVFrame", 620, 220)
 
         local scrollFrame = CreateFrame("ScrollFrame", "TPPCSVScroll", TPP.csvFrame, "UIPanelScrollFrameTemplate")
         scrollFrame:SetPoint("TOPLEFT", 10, -10)

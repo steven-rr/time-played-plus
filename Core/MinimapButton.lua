@@ -10,9 +10,9 @@ function Minimap.Setup(db)
     local LDB = LibStub("LibDataBroker-1.1")
     local LDBIcon = LibStub("LibDBIcon-1.0")
 
-    local dataObj = LDB:NewDataObject("TimePlayed_Plus", {
+    local dataObj = LDB:NewDataObject("TimePlayed+", {
         type = "data source",
-        text = "TimePlayed_Plus",
+        text = "TimePlayed+",
         icon = "Interface/Icons/INV_Misc_PocketWatch_01",
         OnClick = function(_, button)
             if button == "LeftButton" then
@@ -26,7 +26,7 @@ function Minimap.Setup(db)
             local sessionColor = Utils.GetColorHexForTime(sessionDuration)
             local todayColor = Utils.GetColorHexForTime(todayTotal)
 
-            tooltip:AddLine("TimePlayed_Plus", 1, 0.82, 0)
+            tooltip:AddLine("TimePlayed+", 1, 0.82, 0)
             tooltip:AddLine(" ")
             tooltip:AddLine("Session: " .. sessionColor .. Utils.SecondsToHMS(sessionDuration) .. "|r")
             tooltip:AddLine("Today: " .. todayColor .. Utils.SecondsToHMS(todayTotal) .. "|r")
@@ -35,5 +35,5 @@ function Minimap.Setup(db)
         end,
     })
 
-    LDBIcon:Register("TimePlayed_Plus", dataObj, db.profile.minimap)
+    LDBIcon:Register("TimePlayed+", dataObj, db.profile.minimap)
 end
