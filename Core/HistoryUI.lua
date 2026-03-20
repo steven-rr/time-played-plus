@@ -44,13 +44,26 @@ function HistoryUI.Create()
         rows[i] = row
     end
 
-    -- scroll slider
-    local slider = CreateFrame("Slider", "TPPHistorySlider", historyFrame, "UIPanelScrollBarTemplate")
+    -- scroll slider (plain Slider, no deprecated template)
+    local slider = CreateFrame("Slider", "TPPHistorySlider", historyFrame)
+    slider:SetWidth(16)
     slider:SetPoint("TOPRIGHT", historyFrame, "TOPRIGHT", -8, -48)
     slider:SetPoint("BOTTOMRIGHT", historyFrame, "BOTTOMRIGHT", -8, 16)
+    slider:SetOrientation("VERTICAL")
     slider:SetMinMaxValues(0, 1)
     slider:SetValueStep(1)
     slider:SetValue(0)
+    slider:SetObeyStepOnDrag(true)
+
+    local thumb = slider:CreateTexture(nil, "OVERLAY")
+    thumb:SetSize(16, 24)
+    thumb:SetColorTexture(0.6, 0.6, 0.6, 0.8)
+    slider:SetThumbTexture(thumb)
+
+    local bg = slider:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.1, 0.1, 0.1, 0.5)
+
     slider:SetScript("OnValueChanged", function(self, value)
         scrollOffset = math.floor(value)
         HistoryUI.UpdateRows()
