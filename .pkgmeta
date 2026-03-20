@@ -16,6 +16,12 @@ externals:
   Libs/AceConsole-3.0:
     url: https://repos.curseforge.com/wow/ace3/trunk/AceConsole-3.0
     tag: latest
+  Libs/AceGUI-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceGUI-3.0
+    tag: latest
+  Libs/AceConfig-3.0:
+    url: https://repos.curseforge.com/wow/ace3/trunk/AceConfig-3.0
+    tag: latest
   Libs/LibDataBroker-1.1:
     url: https://repos.curseforge.com/wow/libdatabroker-1-1/trunk
     tag: latest
@@ -28,3 +34,5 @@ ignore:
   - LICENSE
   - .gitignore
   - .pkgmeta
+  - package.py
+  - deploy.py

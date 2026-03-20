@@ -13,6 +13,7 @@ local dbDefaults = {
         minimap = {
             hide = false,
         },
+        scale = 1.0,
     },
 }
 
@@ -28,16 +29,27 @@ function addon:OnInitialize()
     TPP.HistoryUI.Create()
     TPP.Minimap.Setup(TPP.db)
 
+    -- register options panel
+    TPP.Options.Setup()
+
+    -- apply saved scale
+    TPP.Utils.ApplyScale(TPP.db.profile.scale)
+
     -- start tracking
     TPP.Data.StartSession()
 
     -- register slash commands
-    self:RegisterChatCommand("tpp", function()
-        TPP.MainUI.Toggle()
-    end)
-    self:RegisterChatCommand("timeplayed", function()
-        TPP.MainUI.Toggle()
-    end)
+    local function handleSlash(input)
+        local cmd = (input or ""):match("^%s*(%S+)") or ""
+        cmd = cmd:lower()
+        if cmd == "options" or cmd == "config" or cmd == "settings" then
+            TPP.Options.Open()
+        else
+            TPP.MainUI.Toggle()
+        end
+    end
+    self:RegisterChatCommand("tpp", handleSlash)
+    self:RegisterChatCommand("timeplayed", handleSlash)
 end
 
 -- AFK tracking

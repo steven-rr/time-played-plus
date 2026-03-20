@@ -1,6 +1,7 @@
 local _, TPP = ...
 
 TPP.Utils = {}
+TPP.frames = {}
 
 function TPP.Utils.SecondsToHMS(seconds)
     local hours = math.floor(seconds / 3600)
@@ -77,7 +78,17 @@ function TPP.Utils.CreateStyledFrame(name, width, height, parent)
     frame:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
     TPP.Utils.MakeFrameMovable(frame)
     frame:Hide()
+    table.insert(TPP.frames, frame)
+    if TPP.db and TPP.db.profile then
+        frame:SetScale(TPP.db.profile.scale or 1.0)
+    end
     return frame
+end
+
+function TPP.Utils.ApplyScale(scale)
+    for _, frame in ipairs(TPP.frames) do
+        frame:SetScale(scale)
+    end
 end
 
 function TPP.Utils.CreateFontString(parent, size, anchorPoint, relFrame, relPoint, xOff, yOff)
