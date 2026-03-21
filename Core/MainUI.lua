@@ -10,7 +10,10 @@ local mainFrame, timeText, charCheckbox
 
 function MainUI.Create()
     mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 200)
-    mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
+    if not (TPP.db and TPP.db.profile and TPP.db.profile.positions["TimePlayed+MainFrame"]) then
+        mainFrame:ClearAllPoints()
+        mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
+    end
 
     -- title
     local title = Utils.CreateFontString(mainFrame, 11, "TOP", mainFrame, "TOP", 0, -12)

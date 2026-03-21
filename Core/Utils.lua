@@ -59,13 +59,25 @@ function TPP.Utils.MakeFrameMovable(frame)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        if TPP.db and TPP.db.profile and self:GetName() then
+            local point, _, relPoint, x, y = self:GetPoint()
+            TPP.db.profile.positions[self:GetName()] = { point, relPoint, x, y }
+        end
+    end)
 end
 
 function TPP.Utils.CreateStyledFrame(name, width, height, parent)
     local frame = CreateFrame("Frame", name, parent or UIParent, "BackdropTemplate")
     frame:SetSize(width, height)
-    frame:SetPoint("CENTER")
+    -- restore saved position or default to center
+    if TPP.db and TPP.db.profile and TPP.db.profile.positions[name] then
+        local pos = TPP.db.profile.positions[name]
+        frame:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4])
+    else
+        frame:SetPoint("CENTER")
+    end
     frame:SetBackdrop({
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
         edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
