@@ -18,6 +18,9 @@ function TPP.Utils.SecondsToHMS(seconds)
 end
 
 function TPP.Utils.GetColorForTime(seconds)
+    if TPP.db and TPP.db.profile and not TPP.db.profile.colorTimer then
+        return 0.2, 1.0, 0.2 -- always green
+    end
     if seconds < 3600 then
         return 0.2, 1.0, 0.2 -- green
     elseif seconds < 7200 then

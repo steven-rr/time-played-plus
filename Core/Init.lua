@@ -14,6 +14,7 @@ local dbDefaults = {
             hide = false,
         },
         scale = 1.0,
+        colorTimer = true,
         positions = {},
     },
 }

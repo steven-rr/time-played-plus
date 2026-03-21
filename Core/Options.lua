@@ -23,11 +23,19 @@ function Options.GetOptionsTable()
                     TPP.Utils.ApplyScale(value)
                 end,
             },
+            colorTimer = {
+                type = "toggle",
+                name = "Color Mode",
+                desc = "When enabled, timer color shifts from green to yellow to red the longer you play. When disabled, timer stays green.",
+                order = 2,
+                get = function() return TPP.db.profile.colorTimer end,
+                set = function(_, value) TPP.db.profile.colorTimer = value end,
+            },
             minimap = {
                 type = "toggle",
                 name = "Show Minimap Button",
                 desc = "Toggle the minimap button visibility",
-                order = 2,
+                order = 3,
                 get = function() return not TPP.db.profile.minimap.hide end,
                 set = function(_, value)
                     TPP.db.profile.minimap.hide = not value
