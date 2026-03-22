@@ -101,40 +101,50 @@ end
 
 function Data.GetDailyAverages(db)
     local days = {}
+    local firstDay = nil
 
     for _, session in ipairs(db.global.sessions) do
         local dayKey = TPP.Utils.GetDayKey(session.startTime)
         days[dayKey] = (days[dayKey] or 0) + session.duration
+        if not firstDay or dayKey < firstDay then
+            firstDay = dayKey
+        end
     end
 
     -- add current session to today
     if Data.isActive then
         local todayKey = TPP.Utils.GetDayKey(time())
         days[todayKey] = (days[todayKey] or 0) + Data.GetSessionDuration()
+        if not firstDay or todayKey < firstDay then
+            firstDay = todayKey
+        end
     end
 
-    -- compute overall average
+    -- compute total playtime
     local totalTime = 0
-    local dayCount = 0
     for _, dayTotal in pairs(days) do
         totalTime = totalTime + dayTotal
-        dayCount = dayCount + 1
     end
-    local overallAvg = dayCount > 0 and (totalTime / dayCount) or 0
 
-    -- compute 7-day average
-    local sortedDays = {}
-    for dayKey, dayTotal in pairs(days) do
-        table.insert(sortedDays, { key = dayKey, total = dayTotal })
+    -- compute overall average across all calendar days since first session
+    local todayKey = TPP.Utils.GetDayKey(time())
+    local calendarDays = 1
+    if firstDay and firstDay ~= todayKey then
+        -- count days between firstDay and today
+        -- parse year, month, day from firstDay (YYYY-MM-DD)
+        local fy, fm, fd = firstDay:match("(%d+)-(%d+)-(%d+)")
+        local firstTimestamp = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd) })
+        calendarDays = math.floor((time() - firstTimestamp) / 86400) + 1
     end
-    table.sort(sortedDays, function(a, b) return a.key > b.key end)
+    local overallAvg = calendarDays > 0 and (totalTime / calendarDays) or 0
 
+    -- compute 7-day average (last 7 calendar days, not just active days)
     local recentTotal = 0
-    local recentCount = math.min(7, #sortedDays)
-    for i = 1, recentCount do
-        recentTotal = recentTotal + sortedDays[i].total
+    for i = 0, 6 do
+        local dayKey = TPP.Utils.GetDayKey(time() - i * 86400)
+        recentTotal = recentTotal + (days[dayKey] or 0)
     end
-    local recentAvg = recentCount > 0 and (recentTotal / recentCount) or 0
+    local recentAvg = recentTotal / 7
 
     return overallAvg, recentAvg
 end
