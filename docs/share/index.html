@@ -83,29 +83,51 @@
         }
 
         .faction-badge {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 14px;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             border: 1px solid rgba(255,255,255,0.1);
         }
 
+        .faction-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
         .faction-badge.alliance {
-            background: rgba(0, 112, 221, 0.2);
+            background: rgba(0, 112, 221, 0.15);
             color: #4a9eff;
         }
 
+        .faction-badge.alliance .faction-dot {
+            background: #4a9eff;
+            box-shadow: 0 0 6px #4a9eff;
+        }
+
         .faction-badge.horde {
-            background: rgba(180, 35, 35, 0.2);
+            background: rgba(180, 35, 35, 0.15);
             color: #e05050;
         }
 
+        .faction-badge.horde .faction-dot {
+            background: #e05050;
+            box-shadow: 0 0 6px #e05050;
+        }
+
         .faction-badge.neutral {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
             color: #888;
+        }
+
+        .faction-badge.neutral .faction-dot {
+            background: #888;
         }
 
         /* Character identity */
@@ -282,10 +304,23 @@
             EVOKER:      { primary: '#33937F', dark: '#0e2520', name: 'Evoker' },
         };
 
-        const FACTION_SYMBOLS = {
-            Alliance: { symbol: 'A', cssClass: 'alliance' },
-            Horde:    { symbol: 'H', cssClass: 'horde' },
-            Neutral:  { symbol: 'N', cssClass: 'neutral' },
+        const FACTION_INFO = {
+            Alliance: { cssClass: 'alliance' },
+            Horde:    { cssClass: 'horde' },
+            Neutral:  { cssClass: 'neutral' },
+        };
+
+        // Convert API race names to display names
+        const RACE_NAMES = {
+            Human: 'Human', Dwarf: 'Dwarf', NightElf: 'Night Elf', Gnome: 'Gnome',
+            Draenei: 'Draenei', Worgen: 'Worgen', VoidElf: 'Void Elf',
+            LightforgedDraenei: 'Lightforged Draenei', DarkIronDwarf: 'Dark Iron Dwarf',
+            KulTiran: 'Kul Tiran', Mechagnome: 'Mechagnome',
+            Orc: 'Orc', Undead: 'Undead', Tauren: 'Tauren', Troll: 'Troll',
+            BloodElf: 'Blood Elf', Goblin: 'Goblin', Nightborne: 'Nightborne',
+            HighmountainTauren: 'Highmountain Tauren', MagharOrc: "Mag'har Orc",
+            ZandalariTroll: 'Zandalari Troll', Vulpera: 'Vulpera',
+            Pandaren: 'Pandaren', Dracthyr: 'Dracthyr', Earthen: 'Earthen',
         };
 
         // URL-safe base64 decode
@@ -362,34 +397,38 @@
                 const sessions = parseInt(parts[3]);
                 const playerClass = parts[4] || 'WARRIOR';
                 const faction = parts[5] || 'Neutral';
+                const raceRaw = parts[6] || '';
 
                 // Parse character name and realm
                 const charParts = character.split(' - ');
                 const charName = charParts[0] || character;
                 const realm = charParts[1] || '';
 
-                // Apply class theme
+                // Get display names
                 const theme = CLASS_THEMES[playerClass] || CLASS_THEMES.WARRIOR;
+                const raceName = RACE_NAMES[raceRaw] || raceRaw;
+                const factionInfo = FACTION_INFO[faction] || FACTION_INFO.Neutral;
+
+                // Apply class theme
                 applyTheme(playerClass);
 
                 // Update page title
                 document.title = charName + ' — TimePlayed+';
 
-                // Faction info
-                const factionInfo = FACTION_SYMBOLS[faction] || FACTION_SYMBOLS.Neutral;
-
                 card.innerHTML = `
                     <div class="header">
                         <div class="brand">TimePlayed+</div>
-                        <div class="faction-badge ${factionInfo.cssClass}">${factionInfo.symbol}</div>
+                        <div class="faction-badge ${factionInfo.cssClass}">
+                            <span class="faction-dot"></span>
+                            ${faction}
+                        </div>
                     </div>
 
                     <div class="identity">
                         <div class="character-name">${charName}</div>
                         <div class="character-meta">
-                            <span class="class-name">${theme.name}</span>
+                            ${raceName ? raceName + ' ' : ''}<span class="class-name">${theme.name}</span>
                             ${realm ? ' · ' + realm : ''}
-                            ${faction !== 'Neutral' ? ' · ' + faction : ''}
                         </div>
                     </div>
 

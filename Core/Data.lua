@@ -179,9 +179,10 @@ function Data.GetShareData(db, characterFilter)
     local sessionCount = Data.GetSessionCount(db, characterFilter)
     local character = characterFilter or TPP.Utils.GetCharacterKey()
 
-    -- get class and faction
+    -- get class, faction, and race
     local _, englishClass = UnitClass("player")
     local faction = UnitFactionGroup("player") or "Neutral"
+    local _, englishRace = UnitRace("player")
 
     return {
         character = character,
@@ -190,6 +191,7 @@ function Data.GetShareData(db, characterFilter)
         sessions = sessionCount,
         class = englishClass or "WARRIOR",
         faction = faction,
+        race = englishRace or "Human",
     }
 end
 
@@ -216,10 +218,10 @@ end
 
 function Data.GenerateShareURL(db, characterFilter)
     local data = Data.GetShareData(db, characterFilter)
-    -- character|dailyAvg|longest|sessions|class|faction
-    local payload = string.format("%s|%d|%d|%d|%s|%s",
+    -- character|dailyAvg|longest|sessions|class|faction|race
+    local payload = string.format("%s|%d|%d|%d|%s|%s|%s",
         data.character, data.dailyAvg, data.longest, data.sessions,
-        data.class, data.faction)
+        data.class, data.faction, data.race)
     local encoded = base64Encode(payload)
     return "https://timeplayed-plus.github.io/share#" .. encoded
 end
