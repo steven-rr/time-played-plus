@@ -3,115 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimePlayed+ Stats</title>
-    <meta property="og:title" content="TimePlayed+ Stats">
-    <meta property="og:description" content="Check out my WoW playtime stats tracked with TimePlayed+">
+    <title>TimePlayed+</title>
+    <meta property="og:title" content="My WoW Playtime — TimePlayed+">
+    <meta property="og:description" content="Check out my World of Warcraft playtime stats!">
     <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --class-primary: #3FC7EB;
+            --class-dark: #1a3a4a;
+            --class-glow: rgba(63, 199, 235, 0.3);
+        }
 
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #0a0a0a;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: #fff;
+            overflow: hidden;
         }
 
+        /* Animated gradient background */
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse at 20% 50%, var(--class-glow), transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.03), transparent 50%),
+                linear-gradient(160deg, #08080c 0%, var(--class-dark) 50%, #08080c 100%);
+        }
+
+        .bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 60% 80%, var(--class-glow), transparent 70%);
+            opacity: 0.4;
+        }
+
+        /* Card with glass effect */
         .card {
-            background: linear-gradient(145deg, #1a1a2e, #16213e);
-            border: 1px solid #2a2a4a;
-            border-radius: 16px;
-            padding: 48px 40px;
-            max-width: 420px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+            width: 400px;
+            max-width: 92vw;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 44px 36px 32px;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.05) inset,
+                0 30px 80px rgba(0,0,0,0.5),
+                0 0 120px -40px var(--class-glow);
         }
 
-        .title {
+        /* Top section: branding + faction */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .faction-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .faction-badge.alliance {
+            background: rgba(0, 112, 221, 0.2);
+            color: #4a9eff;
+        }
+
+        .faction-badge.horde {
+            background: rgba(180, 35, 35, 0.2);
+            color: #e05050;
+        }
+
+        .faction-badge.neutral {
+            background: rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        /* Character identity */
+        .identity {
+            margin-bottom: 32px;
+        }
+
+        .character-name {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+
+        .character-meta {
+            font-size: 13px;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .class-name {
+            color: var(--class-primary);
+            font-weight: 500;
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255,255,255,0.1) 20%,
+                rgba(255,255,255,0.1) 80%,
+                transparent);
+            margin: 0 0 28px 0;
+        }
+
+        /* Hero stat */
+        .hero-stat {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .hero-value {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            line-height: 1;
+            background: linear-gradient(180deg, #fff 30%, var(--class-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-label {
+            font-size: 12px;
+            font-weight: 500;
             letter-spacing: 2px;
             text-transform: uppercase;
-            color: #ffd100;
-            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-top: 8px;
         }
 
-        .character {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 36px;
-            color: #fff;
-        }
-
-        .stats {
+        /* Secondary stats */
+        .stats-row {
             display: flex;
-            flex-direction: column;
-            gap: 24px;
-            margin-bottom: 36px;
+            gap: 16px;
+            margin-bottom: 32px;
         }
 
-        .stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            padding: 0 8px;
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: #888;
+        .stat-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 18px 16px;
+            text-align: center;
         }
 
         .stat-value {
             font-size: 22px;
             font-weight: 600;
-            color: #33ff66;
+            letter-spacing: -0.5px;
+            color: #fff;
+            line-height: 1.2;
         }
 
-        .stat-value.highlight {
-            color: #ffd100;
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 6px;
         }
 
+        /* Footer */
         .footer {
-            border-top: 1px solid #2a2a4a;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #555;
+            text-align: center;
+            padding-top: 4px;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.25);
         }
 
         .footer a {
-            color: #ffd100;
+            color: var(--class-primary);
             text-decoration: none;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: opacity 0.2s;
         }
 
         .footer a:hover {
+            opacity: 1;
             text-decoration: underline;
         }
 
+        /* Error state */
         .error {
-            color: #888;
-            font-size: 16px;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .error-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .error-msg {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Subtle animation on load */
+        .card {
+            animation: fadeUp 0.6s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="card" id="card">
-        <div class="title">TimePlayed+</div>
-        <div class="character" id="character">Loading...</div>
-        <div class="stats" id="stats"></div>
-        <div class="footer">
-            Tracked with <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
-        </div>
-    </div>
+    <div class="bg" id="bg"></div>
+    <div class="card" id="card"></div>
 
     <script>
+        // WoW class color definitions
+        const CLASS_THEMES = {
+            WARRIOR:     { primary: '#C69B6D', dark: '#2e2318', name: 'Warrior' },
+            PALADIN:     { primary: '#F48CBA', dark: '#3a1f2a', name: 'Paladin' },
+            HUNTER:      { primary: '#AAD372', dark: '#232e18', name: 'Hunter' },
+            ROGUE:       { primary: '#FFF468', dark: '#3a3518', name: 'Rogue' },
+            PRIEST:      { primary: '#e0e0e0', dark: '#2a2a2e', name: 'Priest' },
+            DEATHKNIGHT: { primary: '#C41E3A', dark: '#2e0a10', name: 'Death Knight' },
+            SHAMAN:      { primary: '#0070DD', dark: '#0a1a2e', name: 'Shaman' },
+            MAGE:        { primary: '#3FC7EB', dark: '#0e2a35', name: 'Mage' },
+            WARLOCK:     { primary: '#8788EE', dark: '#1a1a3a', name: 'Warlock' },
+            MONK:        { primary: '#00FF98', dark: '#0a2e1e', name: 'Monk' },
+            DRUID:       { primary: '#FF7C0A', dark: '#2e1a08', name: 'Druid' },
+            DEMONHUNTER: { primary: '#A330C9', dark: '#2a0e35', name: 'Demon Hunter' },
+            EVOKER:      { primary: '#33937F', dark: '#0e2520', name: 'Evoker' },
+        };
+
+        const FACTION_SYMBOLS = {
+            Alliance: { symbol: 'A', cssClass: 'alliance' },
+            Horde:    { symbol: 'H', cssClass: 'horde' },
+            Neutral:  { symbol: 'N', cssClass: 'neutral' },
+        };
+
         // URL-safe base64 decode
         function base64Decode(str) {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-            // Pad to multiple of 4
             while (str.length % 4 !== 0) str += 'A';
             let result = '';
             for (let i = 0; i < str.length; i += 4) {
@@ -121,10 +300,9 @@
                 const d = chars.indexOf(str[i + 3]);
                 const n = (a << 18) | (b << 12) | (c << 6) | d;
                 result += String.fromCharCode((n >> 16) & 0xFF);
-                if (str[i + 2] !== '=') result += String.fromCharCode((n >> 8) & 0xFF);
-                if (str[i + 3] !== '=') result += String.fromCharCode(n & 0xFF);
+                result += String.fromCharCode((n >> 8) & 0xFF);
+                result += String.fromCharCode(n & 0xFF);
             }
-            // Remove null bytes from padding
             return result.replace(/\0+$/, '');
         }
 
@@ -132,56 +310,125 @@
             seconds = parseInt(seconds);
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
-            if (hours > 0) {
-                return hours + 'h ' + minutes + 'm';
-            }
-            return minutes + 'm';
+            if (hours > 0 && minutes > 0) return hours + 'h ' + minutes + 'm';
+            if (hours > 0) return hours + 'h';
+            if (minutes > 0) return minutes + 'm';
+            return '< 1m';
+        }
+
+        function applyTheme(className) {
+            const theme = CLASS_THEMES[className] || CLASS_THEMES.WARRIOR;
+            document.documentElement.style.setProperty('--class-primary', theme.primary);
+            document.documentElement.style.setProperty('--class-dark', theme.dark);
+            document.documentElement.style.setProperty('--class-glow',
+                theme.primary.replace('#', 'rgba(') ?
+                `${theme.primary}33` : 'rgba(255,255,255,0.1)');
+
+            // Convert hex to rgba for glow
+            const hex = theme.primary.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            document.documentElement.style.setProperty('--class-glow', `rgba(${r},${g},${b},0.25)`);
         }
 
         function render() {
             const hash = window.location.hash.substring(1);
-            const characterEl = document.getElementById('character');
-            const statsEl = document.getElementById('stats');
+            const card = document.getElementById('card');
 
             if (!hash) {
-                characterEl.textContent = '';
-                statsEl.innerHTML = '<div class="error">No stats data found in the link.</div>';
+                card.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">&#9202;</div>
+                        <div class="error-msg">No stats found in this link.</div>
+                    </div>
+                    <div class="footer" style="margin-top: 24px">
+                        <div class="footer-text">
+                            Track your playtime with
+                            <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
+                        </div>
+                    </div>`;
                 return;
             }
 
             try {
                 const decoded = base64Decode(hash);
                 const parts = decoded.split('|');
-
                 if (parts.length < 4) throw new Error('Invalid data');
 
                 const character = parts[0];
                 const dailyAvg = parseInt(parts[1]);
                 const longest = parseInt(parts[2]);
                 const sessions = parseInt(parts[3]);
+                const playerClass = parts[4] || 'WARRIOR';
+                const faction = parts[5] || 'Neutral';
 
-                characterEl.textContent = character;
+                // Parse character name and realm
+                const charParts = character.split(' - ');
+                const charName = charParts[0] || character;
+                const realm = charParts[1] || '';
 
-                // Update page title with character name
-                document.title = character + ' - TimePlayed+';
+                // Apply class theme
+                const theme = CLASS_THEMES[playerClass] || CLASS_THEMES.WARRIOR;
+                applyTheme(playerClass);
 
-                statsEl.innerHTML = `
-                    <div class="stat">
-                        <span class="stat-label">Daily Average</span>
-                        <span class="stat-value">${formatTime(dailyAvg)}</span>
+                // Update page title
+                document.title = charName + ' — TimePlayed+';
+
+                // Faction info
+                const factionInfo = FACTION_SYMBOLS[faction] || FACTION_SYMBOLS.Neutral;
+
+                card.innerHTML = `
+                    <div class="header">
+                        <div class="brand">TimePlayed+</div>
+                        <div class="faction-badge ${factionInfo.cssClass}">${factionInfo.symbol}</div>
                     </div>
-                    <div class="stat">
-                        <span class="stat-label">Longest Session</span>
-                        <span class="stat-value highlight">${formatTime(longest)}</span>
+
+                    <div class="identity">
+                        <div class="character-name">${charName}</div>
+                        <div class="character-meta">
+                            <span class="class-name">${theme.name}</span>
+                            ${realm ? ' · ' + realm : ''}
+                            ${faction !== 'Neutral' ? ' · ' + faction : ''}
+                        </div>
                     </div>
-                    <div class="stat">
-                        <span class="stat-label">Total Sessions</span>
-                        <span class="stat-value">${sessions}</span>
+
+                    <div class="divider"></div>
+
+                    <div class="hero-stat">
+                        <div class="hero-value">${formatTime(dailyAvg)}</div>
+                        <div class="hero-label">Daily Average</div>
                     </div>
-                `;
+
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-value">${formatTime(longest)}</div>
+                            <div class="stat-label">Longest</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${sessions}</div>
+                            <div class="stat-label">Sessions</div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="footer-text">
+                            Tracked with
+                            <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
+                        </div>
+                    </div>`;
             } catch (e) {
-                characterEl.textContent = '';
-                statsEl.innerHTML = '<div class="error">Could not read stats from this link.</div>';
+                card.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">&#9202;</div>
+                        <div class="error-msg">Couldn't read stats from this link.</div>
+                    </div>
+                    <div class="footer" style="margin-top: 24px">
+                        <div class="footer-text">
+                            Track your playtime with
+                            <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
+                        </div>
+                    </div>`;
             }
         }
 
