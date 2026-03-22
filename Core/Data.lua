@@ -214,7 +214,7 @@ function Data.GenerateShareURL(db, characterFilter)
     local payload = string.format("%s|%d|%d|%d",
         data.character, data.dailyAvg, data.longest, data.sessions)
     local encoded = base64Encode(payload)
-    return "https://steven-rr.github.io/time-played-plus/share#" .. encoded
+    return "https://timeplayed-plus.github.io/share#" .. encoded
 end
 
 function Data.GetCSV(db, characterFilter)
