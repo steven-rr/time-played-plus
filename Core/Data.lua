@@ -173,10 +173,25 @@ function Data.GetSessionCount(db, characterFilter)
     return count
 end
 
+function Data.GetDaysPlayed(db, characterFilter)
+    local days = {}
+    for _, session in ipairs(db.global.sessions) do
+        if not characterFilter or session.character == characterFilter then
+            local dayKey = TPP.Utils.GetDayKey(session.startTime)
+            days[dayKey] = true
+        end
+    end
+    local count = 0
+    for _ in pairs(days) do
+        count = count + 1
+    end
+    return count
+end
+
 function Data.GetShareData(db, characterFilter)
     local overallAvg = Data.GetDailyAverages(db)
     local longest = Data.GetLongestSession(db, characterFilter)
-    local sessionCount = Data.GetSessionCount(db, characterFilter)
+    local daysPlayed = Data.GetDaysPlayed(db, characterFilter)
     local character = characterFilter or TPP.Utils.GetCharacterKey()
 
     -- get class, faction, and race
@@ -188,7 +203,7 @@ function Data.GetShareData(db, characterFilter)
         character = character,
         dailyAvg = math.floor(overallAvg),
         longest = longest,
-        sessions = sessionCount,
+        daysPlayed = daysPlayed,
         class = englishClass or "WARRIOR",
         faction = faction,
         race = englishRace or "Human",
@@ -218,9 +233,9 @@ end
 
 function Data.GenerateShareURL(db, characterFilter)
     local data = Data.GetShareData(db, characterFilter)
-    -- character|dailyAvg|longest|sessions|class|faction|race
+    -- character|dailyAvg|longest|daysPlayed|class|faction|race
     local payload = string.format("%s|%d|%d|%d|%s|%s|%s",
-        data.character, data.dailyAvg, data.longest, data.sessions,
+        data.character, data.dailyAvg, data.longest, data.daysPlayed,
         data.class, data.faction, data.race)
     local encoded = base64Encode(payload)
     return "https://timeplayed-plus.github.io/share#" .. encoded

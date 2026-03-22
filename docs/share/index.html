@@ -353,7 +353,7 @@
                 const character = parts[0];
                 const dailyAvg = parseInt(parts[1]);
                 const longest = parseInt(parts[2]);
-                const sessions = parseInt(parts[3]);
+                const daysPlayed = parseInt(parts[3]);
                 const playerClass = parts[4] || 'WARRIOR';
                 const faction = parts[5] || 'Neutral';
                 const raceRaw = parts[6] || '';
@@ -400,8 +400,8 @@
                             <div class="stat-label">Longest</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-value">${sessions}</div>
-                            <div class="stat-label">Sessions</div>
+                            <div class="stat-value">${daysPlayed}</div>
+                            <div class="stat-label">Days Played</div>
                         </div>
                     </div>
 
