@@ -151,6 +151,72 @@ function Data.GetSessions(db, characterFilter)
     return sessions
 end
 
+function Data.GetLongestSession(db, characterFilter)
+    local longest = 0
+    for _, session in ipairs(db.global.sessions) do
+        if not characterFilter or session.character == characterFilter then
+            if session.duration > longest then
+                longest = session.duration
+            end
+        end
+    end
+    return longest
+end
+
+function Data.GetSessionCount(db, characterFilter)
+    local count = 0
+    for _, session in ipairs(db.global.sessions) do
+        if not characterFilter or session.character == characterFilter then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function Data.GetShareData(db, characterFilter)
+    local overallAvg = Data.GetDailyAverages(db)
+    local longest = Data.GetLongestSession(db, characterFilter)
+    local sessionCount = Data.GetSessionCount(db, characterFilter)
+    local character = characterFilter or TPP.Utils.GetCharacterKey()
+
+    return {
+        character = character,
+        dailyAvg = math.floor(overallAvg),
+        longest = longest,
+        sessions = sessionCount,
+    }
+end
+
+-- Simple base64 encoding for share URLs
+local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+local function base64Encode(str)
+    local result = {}
+    local pad = (3 - #str % 3) % 3
+    str = str .. string.rep("\0", pad)
+    for i = 1, #str, 3 do
+        local a, b, c = string.byte(str, i, i + 2)
+        local n = a * 65536 + b * 256 + c
+        table.insert(result, string.sub(b64chars, math.floor(n / 262144) + 1, math.floor(n / 262144) + 1))
+        table.insert(result, string.sub(b64chars, math.floor(n / 4096) % 64 + 1, math.floor(n / 4096) % 64 + 1))
+        table.insert(result, string.sub(b64chars, math.floor(n / 64) % 64 + 1, math.floor(n / 64) % 64 + 1))
+        table.insert(result, string.sub(b64chars, n % 64 + 1, n % 64 + 1))
+    end
+    -- remove padding chars
+    for i = 1, pad do
+        result[#result] = nil
+    end
+    return table.concat(result)
+end
+
+function Data.GenerateShareURL(db, characterFilter)
+    local data = Data.GetShareData(db, characterFilter)
+    -- Build a compact JSON-like string: character|dailyAvg|longest|sessions
+    local payload = string.format("%s|%d|%d|%d",
+        data.character, data.dailyAvg, data.longest, data.sessions)
+    local encoded = base64Encode(payload)
+    return "https://steven-rr.github.io/time-played-plus/share#" .. encoded
+end
+
 function Data.GetCSV(db, characterFilter)
     local lines = { "Date,Start Time,Character,Duration (seconds)" }
     local sessions = Data.GetSessions(db, characterFilter)

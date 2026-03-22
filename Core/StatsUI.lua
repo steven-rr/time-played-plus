@@ -9,7 +9,7 @@ local Data = TPP.Data
 local statsFrame, avgText, recentAvgText, todayText
 
 function StatsUI.Create()
-    statsFrame = Utils.CreateStyledFrame("TimePlayed+StatsFrame", 300, 160)
+    statsFrame = Utils.CreateStyledFrame("TimePlayed+StatsFrame", 300, 180)
 
     local title = Utils.CreateFontString(statsFrame, 11, "TOP", statsFrame, "TOP", 0, -12)
     title:SetText("Playtime Stats")
@@ -29,6 +29,16 @@ function StatsUI.Create()
     local todayLabel = Utils.CreateFontString(statsFrame, 10, "TOPLEFT", recentLabel, "BOTTOMLEFT", 0, -10)
     todayLabel:SetText("Today:")
     todayText = Utils.CreateFontString(statsFrame, 10, "LEFT", todayLabel, "RIGHT", 8, 0)
+
+    -- share button
+    local shareBtn = CreateFrame("Button", nil, statsFrame, "UIPanelButtonTemplate")
+    shareBtn:SetSize(110, 24)
+    shareBtn:SetPoint("BOTTOM", statsFrame, "BOTTOM", 0, 10)
+    shareBtn:SetText("Share")
+    shareBtn:SetScript("OnClick", function()
+        local url = Data.GenerateShareURL(TPP.db, TPP.characterFilter)
+        TPP.MainUI.ShowCopyableText("Share Your Stats", url)
+    end)
 
     local closeBtn = CreateFrame("Button", nil, statsFrame, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", statsFrame, "TOPRIGHT", -2, -2)

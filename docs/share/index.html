@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimePlayed+ Stats</title>
+    <meta property="og:title" content="TimePlayed+ Stats">
+    <meta property="og:description" content="Check out my WoW playtime stats tracked with TimePlayed+">
+    <meta property="og:type" content="website">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+        }
+
+        .card {
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border: 1px solid #2a2a4a;
+            border-radius: 16px;
+            padding: 48px 40px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .title {
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #ffd100;
+            margin-bottom: 8px;
+        }
+
+        .character {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 36px;
+            color: #fff;
+        }
+
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 0 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 600;
+            color: #33ff66;
+        }
+
+        .stat-value.highlight {
+            color: #ffd100;
+        }
+
+        .footer {
+            border-top: 1px solid #2a2a4a;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .footer a {
+            color: #ffd100;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .error {
+            color: #888;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="card">
+        <div class="title">TimePlayed+</div>
+        <div class="character" id="character">Loading...</div>
+        <div class="stats" id="stats"></div>
+        <div class="footer">
+            Tracked with <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
+        </div>
+    </div>
+
+    <script>
+        // URL-safe base64 decode
+        function base64Decode(str) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+            // Pad to multiple of 4
+            while (str.length % 4 !== 0) str += 'A';
+            let result = '';
+            for (let i = 0; i < str.length; i += 4) {
+                const a = chars.indexOf(str[i]);
+                const b = chars.indexOf(str[i + 1]);
+                const c = chars.indexOf(str[i + 2]);
+                const d = chars.indexOf(str[i + 3]);
+                const n = (a << 18) | (b << 12) | (c << 6) | d;
+                result += String.fromCharCode((n >> 16) & 0xFF);
+                if (str[i + 2] !== '=') result += String.fromCharCode((n >> 8) & 0xFF);
+                if (str[i + 3] !== '=') result += String.fromCharCode(n & 0xFF);
+            }
+            // Remove null bytes from padding
+            return result.replace(/\0+$/, '');
+        }
+
+        function formatTime(seconds) {
+            seconds = parseInt(seconds);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) {
+                return hours + 'h ' + minutes + 'm';
+            }
+            return minutes + 'm';
+        }
+
+        function render() {
+            const hash = window.location.hash.substring(1);
+            const characterEl = document.getElementById('character');
+            const statsEl = document.getElementById('stats');
+
+            if (!hash) {
+                characterEl.textContent = '';
+                statsEl.innerHTML = '<div class="error">No stats data found in the link.</div>';
+                return;
+            }
+
+            try {
+                const decoded = base64Decode(hash);
+                const parts = decoded.split('|');
+
+                if (parts.length < 4) throw new Error('Invalid data');
+
+                const character = parts[0];
+                const dailyAvg = parseInt(parts[1]);
+                const longest = parseInt(parts[2]);
+                const sessions = parseInt(parts[3]);
+
+                characterEl.textContent = character;
+
+                // Update page title with character name
+                document.title = character + ' - TimePlayed+';
+
+                statsEl.innerHTML = `
+                    <div class="stat">
+                        <span class="stat-label">Daily Average</span>
+                        <span class="stat-value">${formatTime(dailyAvg)}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Longest Session</span>
+                        <span class="stat-value highlight">${formatTime(longest)}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Total Sessions</span>
+                        <span class="stat-value">${sessions}</span>
+                    </div>
+                `;
+            } catch (e) {
+                characterEl.textContent = '';
+                statsEl.innerHTML = '<div class="error">Could not read stats from this link.</div>';
+            }
+        }
+
+        render();
+    </script>
+</body>
+</html>

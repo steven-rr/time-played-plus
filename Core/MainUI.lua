@@ -9,7 +9,7 @@ local Data = TPP.Data
 local mainFrame, timeText, charCheckbox
 
 function MainUI.Create()
-    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 200)
+    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 170)
     if not (TPP.db and TPP.db.profile and TPP.db.profile.positions["TimePlayed+MainFrame"]) then
         mainFrame:ClearAllPoints()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
@@ -40,12 +40,6 @@ function MainUI.Create()
     historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -90)
     historyBtn:SetText("History")
     historyBtn:SetScript("OnClick", function() TPP.HistoryUI.Toggle() end)
-
-    local csvBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
-    csvBtn:SetSize(110, 24)
-    csvBtn:SetPoint("TOP", statsBtn, "BOTTOM", 0, -4)
-    csvBtn:SetText("Export CSV")
-    csvBtn:SetScript("OnClick", function() MainUI.ShowCSV() end)
 
     -- character filter checkbox
     charCheckbox = CreateFrame("CheckButton", "TPPCharCheckbox", mainFrame, "UICheckButtonTemplate")
@@ -114,6 +108,38 @@ function MainUI.ShowCSV()
     TPP.csvEditBox:SetText(Data.GetCSV(TPP.db, TPP.characterFilter))
     TPP.csvEditBox:HighlightText()
     TPP.csvFrame:Show()
+end
+
+-- ShowCopyableText: generic popup for any copiable text (used by Share and CSV)
+function MainUI.ShowCopyableText(title, text)
+    if not TPP.copyFrame then
+        TPP.copyFrame = Utils.CreateStyledFrame("TimePlayed+CopyFrame", 620, 220)
+
+        local titleText = Utils.CreateFontString(TPP.copyFrame, 11, "TOP", TPP.copyFrame, "TOP", 0, -12)
+        titleText:SetTextColor(1, 0.82, 0)
+        TPP.copyFrameTitle = titleText
+
+        local scrollFrame = CreateFrame("ScrollFrame", "TPPCopyScroll", TPP.copyFrame, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", 10, -30)
+        scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
+
+        local editBox = CreateFrame("EditBox", "TPPCopyEditBox", scrollFrame)
+        editBox:SetMultiLine(true)
+        editBox:SetFontObject("ChatFontNormal")
+        editBox:SetWidth(570)
+        editBox:SetAutoFocus(false)
+        scrollFrame:SetScrollChild(editBox)
+
+        TPP.copyEditBox = editBox
+
+        local closeBtn = CreateFrame("Button", nil, TPP.copyFrame, "UIPanelCloseButton")
+        closeBtn:SetPoint("TOPRIGHT", TPP.copyFrame, "TOPRIGHT", -2, -2)
+    end
+
+    TPP.copyFrameTitle:SetText(title)
+    TPP.copyEditBox:SetText(text)
+    TPP.copyEditBox:HighlightText()
+    TPP.copyFrame:Show()
 end
 
 function MainUI.GetFrame()

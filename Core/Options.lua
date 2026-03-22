@@ -51,11 +51,20 @@ function Options.GetOptionsTable()
                 name = "Data",
                 order = 10,
             },
+            exportCSV = {
+                type = "execute",
+                name = "Export Session Data (CSV)",
+                desc = "Export all session data as CSV text you can copy",
+                order = 11,
+                func = function()
+                    TPP.MainUI.ShowCSV()
+                end,
+            },
             deleteHistory = {
                 type = "execute",
                 name = "Delete All Session History",
                 desc = "Permanently delete all recorded sessions for every character",
-                order = 11,
+                order = 12,
                 confirm = true,
                 confirmText = "Are you sure? This will delete all session history for ALL characters and cannot be undone.",
                 func = function()
