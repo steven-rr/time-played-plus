@@ -177,6 +177,17 @@
         .footer {
             text-align: center;
             padding-top: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .footer-logo {
+            width: 28px;
+            height: 28px;
+            filter: brightness(0) invert(1);
+            opacity: 0.35;
         }
 
         .footer-text {
@@ -396,6 +407,7 @@
                     </div>
 
                     <div class="footer">
+                        <img src="logo.png" alt="TimePlayed+" class="footer-logo">
                         <div class="footer-text">
                             Tracked with
                             <a href="https://www.curseforge.com/wow/addons/timeplayed-plus">TimePlayed+</a>
