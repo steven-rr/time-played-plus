@@ -6,7 +6,7 @@ local StatsUI = TPP.StatsUI
 local Utils = TPP.Utils
 local Data = TPP.Data
 
-local statsFrame, avgText, recentAvgText, todayText
+local statsFrame, avgText, recentAvgText, longestText
 
 function StatsUI.Create()
     statsFrame = Utils.CreateStyledFrame("TimePlayed+StatsFrame", 300, 180)
@@ -25,10 +25,10 @@ function StatsUI.Create()
     recentLabel:SetText("Last 7 Days Avg:")
     recentAvgText = Utils.CreateFontString(statsFrame, 10, "LEFT", recentLabel, "RIGHT", 8, 0)
 
-    -- today total
-    local todayLabel = Utils.CreateFontString(statsFrame, 10, "TOPLEFT", recentLabel, "BOTTOMLEFT", 0, -10)
-    todayLabel:SetText("Today:")
-    todayText = Utils.CreateFontString(statsFrame, 10, "LEFT", todayLabel, "RIGHT", 8, 0)
+    -- longest session
+    local longestLabel = Utils.CreateFontString(statsFrame, 10, "TOPLEFT", recentLabel, "BOTTOMLEFT", 0, -10)
+    longestLabel:SetText("Longest Session:")
+    longestText = Utils.CreateFontString(statsFrame, 10, "LEFT", longestLabel, "RIGHT", 8, 0)
 
     -- share button
     local shareBtn = CreateFrame("Button", nil, statsFrame, "UIPanelButtonTemplate")
@@ -57,11 +57,11 @@ function StatsUI.Refresh()
     if not statsFrame or not TPP.db then return end
 
     local overallAvg, recentAvg = Data.GetDailyAverages(TPP.db)
-    local todayTotal = Data.GetTodayTotal(TPP.db)
+    local longest = Data.GetLongestSession(TPP.db, TPP.characterFilter)
 
     avgText:SetText(Utils.GetColorHexForTime(overallAvg) .. Utils.SecondsToHMS(overallAvg) .. "|r")
     recentAvgText:SetText(Utils.GetColorHexForTime(recentAvg) .. Utils.SecondsToHMS(recentAvg) .. "|r")
-    todayText:SetText(Utils.GetColorHexForTime(todayTotal) .. Utils.SecondsToHMS(todayTotal) .. "|r")
+    longestText:SetText(Utils.GetColorHexForTime(longest) .. Utils.SecondsToHMS(longest) .. "|r")
 end
 
 function StatsUI.Toggle()

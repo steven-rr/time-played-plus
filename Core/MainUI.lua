@@ -6,10 +6,10 @@ local MainUI = TPP.MainUI
 local Utils = TPP.Utils
 local Data = TPP.Data
 
-local mainFrame, timeText, charCheckbox
+local mainFrame, timeText, todayText, charCheckbox
 
 function MainUI.Create()
-    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 170)
+    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 190)
     if not (TPP.db and TPP.db.profile and TPP.db.profile.positions["TimePlayed+MainFrame"]) then
         mainFrame:ClearAllPoints()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
@@ -28,16 +28,21 @@ function MainUI.Create()
     timeText = Utils.CreateFontString(mainFrame, 16, "TOP", label, "BOTTOM", 0, -6)
     timeText:SetText("0s")
 
+    -- today total
+    todayText = Utils.CreateFontString(mainFrame, 10, "TOP", timeText, "BOTTOM", 0, -6)
+    todayText:SetText("Today: 0s")
+    todayText:SetTextColor(0.7, 0.7, 0.7)
+
     -- buttons
     local statsBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
     statsBtn:SetSize(110, 24)
-    statsBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 16, -90)
+    statsBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 16, -110)
     statsBtn:SetText("Stats")
     statsBtn:SetScript("OnClick", function() TPP.StatsUI.Toggle() end)
 
     local historyBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
     historyBtn:SetSize(110, 24)
-    historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -90)
+    historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -110)
     historyBtn:SetText("History")
     historyBtn:SetScript("OnClick", function() TPP.HistoryUI.Toggle() end)
 
@@ -73,6 +78,11 @@ function MainUI.UpdateTimeDisplay()
     timeText:SetText(Utils.SecondsToHMS(duration))
     local r, g, b = Utils.GetColorForTime(duration)
     timeText:SetTextColor(r, g, b)
+
+    if todayText and TPP.db then
+        local todayTotal = Data.GetTodayTotal(TPP.db)
+        todayText:SetText("Today: " .. Utils.SecondsToHMS(todayTotal))
+    end
 end
 
 function MainUI.Toggle()
