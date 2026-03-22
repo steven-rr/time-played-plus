@@ -66,11 +66,8 @@
                 0 0 120px -40px var(--class-glow);
         }
 
-        /* Top section: branding + faction */
+        /* Top section: branding */
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             margin-bottom: 28px;
         }
 
@@ -80,54 +77,6 @@
             letter-spacing: 3px;
             text-transform: uppercase;
             color: rgba(255, 255, 255, 0.35);
-        }
-
-        .faction-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .faction-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-        }
-
-        .faction-badge.alliance {
-            background: rgba(0, 112, 221, 0.15);
-            color: #4a9eff;
-        }
-
-        .faction-badge.alliance .faction-dot {
-            background: #4a9eff;
-            box-shadow: 0 0 6px #4a9eff;
-        }
-
-        .faction-badge.horde {
-            background: rgba(180, 35, 35, 0.15);
-            color: #e05050;
-        }
-
-        .faction-badge.horde .faction-dot {
-            background: #e05050;
-            box-shadow: 0 0 6px #e05050;
-        }
-
-        .faction-badge.neutral {
-            background: rgba(255, 255, 255, 0.08);
-            color: #888;
-        }
-
-        .faction-badge.neutral .faction-dot {
-            background: #888;
         }
 
         /* Character identity */
@@ -418,10 +367,6 @@
                 card.innerHTML = `
                     <div class="header">
                         <div class="brand">TimePlayed+</div>
-                        <div class="faction-badge ${factionInfo.cssClass}">
-                            <span class="faction-dot"></span>
-                            ${faction}
-                        </div>
                     </div>
 
                     <div class="identity">
