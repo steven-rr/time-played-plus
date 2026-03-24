@@ -22,16 +22,16 @@ function MainUI.Create()
 
     -- label
     local label = Utils.CreateFontString(mainFrame, 10, "TOP", title, "BOTTOM", 0, -8)
-    label:SetText("Session Playtime:")
+    label:SetText("Today's Playtime:")
 
-    -- time display
-    timeText = Utils.CreateFontString(mainFrame, 16, "TOP", label, "BOTTOM", 0, -6)
-    timeText:SetText("0s")
+    -- today total (hero number)
+    todayText = Utils.CreateFontString(mainFrame, 16, "TOP", label, "BOTTOM", 0, -6)
+    todayText:SetText("0s")
 
-    -- today total
-    todayText = Utils.CreateFontString(mainFrame, 10, "TOP", timeText, "BOTTOM", 0, -6)
-    todayText:SetText("Today: 0s")
-    todayText:SetTextColor(1, 1, 1)
+    -- session time (secondary, faint)
+    timeText = Utils.CreateFontString(mainFrame, 10, "TOP", todayText, "BOTTOM", 0, -6)
+    timeText:SetText("Session: 0s")
+    timeText:SetTextColor(0.6, 0.6, 0.6)
 
     -- buttons
     local statsBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
@@ -73,15 +73,18 @@ function MainUI.Create()
 end
 
 function MainUI.UpdateTimeDisplay()
-    if not timeText then return end
-    local duration = Data.GetSessionDuration()
-    timeText:SetText(Utils.SecondsToHMS(duration))
-    local r, g, b = Utils.GetColorForTime(duration)
-    timeText:SetTextColor(r, g, b)
+    if not todayText or not TPP.db then return end
 
-    if todayText and TPP.db then
-        local todayTotal = Data.GetTodayTotal(TPP.db)
-        todayText:SetText("Today: " .. Utils.SecondsToHMS(todayTotal))
+    -- today is the hero
+    local todayTotal = Data.GetTodayTotal(TPP.db)
+    todayText:SetText(Utils.SecondsToHMS(todayTotal))
+    local r, g, b = Utils.GetColorForTime(todayTotal)
+    todayText:SetTextColor(r, g, b)
+
+    -- session is secondary
+    if timeText then
+        local duration = Data.GetSessionDuration()
+        timeText:SetText("Session: " .. Utils.SecondsToHMS(duration))
     end
 end
 
