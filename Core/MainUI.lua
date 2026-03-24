@@ -31,7 +31,7 @@ function MainUI.Create()
     -- today total
     todayText = Utils.CreateFontString(mainFrame, 10, "TOP", timeText, "BOTTOM", 0, -6)
     todayText:SetText("Today: 0s")
-    todayText:SetTextColor(0.7, 0.7, 0.7)
+    todayText:SetTextColor(1, 1, 1)
 
     -- buttons
     local statsBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
