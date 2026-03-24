@@ -54,6 +54,11 @@ function TPP.Utils.GetColorHexForTime(seconds)
     return string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
 end
 
+function TPP.Utils.GetColorHexForDailyTime(seconds)
+    local r, g, b = TPP.Utils.GetColorForDailyTime(seconds)
+    return string.format("|cff%02x%02x%02x", r * 255, g * 255, b * 255)
+end
+
 function TPP.Utils.FormatDate(timestamp)
     return date("%m/%d/%y", timestamp)
 end

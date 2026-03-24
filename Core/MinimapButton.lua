@@ -26,7 +26,7 @@ function Minimap.Setup(db)
             local todayTotal = Data.GetTodayTotal(db)
 
             local sessionColor = Utils.GetColorHexForTime(sessionDuration)
-            local todayColor = Utils.GetColorHexForTime(todayTotal)
+            local todayColor = Utils.GetColorHexForDailyTime(todayTotal)
 
             tooltip:AddLine("TimePlayed+", 1, 0.82, 0)
             tooltip:AddLine(" ")
