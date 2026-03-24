@@ -80,6 +80,13 @@ function HistoryUI.Create()
         slider:SetValue(newVal)
     end)
 
+    -- export CSV button
+    local csvBtn = CreateFrame("Button", nil, historyFrame, "UIPanelButtonTemplate")
+    csvBtn:SetSize(110, 24)
+    csvBtn:SetPoint("BOTTOMRIGHT", historyFrame, "BOTTOMRIGHT", -16, 8)
+    csvBtn:SetText("Export CSV")
+    csvBtn:SetScript("OnClick", function() TPP.MainUI.ShowCSV() end)
+
     local closeBtn = CreateFrame("Button", nil, historyFrame, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", historyFrame, "TOPRIGHT", -2, -2)
 

@@ -9,7 +9,7 @@ local Data = TPP.Data
 local mainFrame, timeText, todayText, charCheckbox
 
 function MainUI.Create()
-    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 210)
+    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 180)
     if not (TPP.db and TPP.db.profile and TPP.db.profile.positions["TimePlayed+MainFrame"]) then
         mainFrame:ClearAllPoints()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
@@ -45,12 +45,6 @@ function MainUI.Create()
     historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -106)
     historyBtn:SetText("History")
     historyBtn:SetScript("OnClick", function() TPP.HistoryUI.Toggle() end)
-
-    local csvBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
-    csvBtn:SetSize(110, 24)
-    csvBtn:SetPoint("TOP", statsBtn, "BOTTOM", 0, -4)
-    csvBtn:SetText("Export CSV")
-    csvBtn:SetScript("OnClick", function() MainUI.ShowCSV() end)
 
     -- character filter checkbox
     charCheckbox = CreateFrame("CheckButton", "TPPCharCheckbox", mainFrame, "UICheckButtonTemplate")
