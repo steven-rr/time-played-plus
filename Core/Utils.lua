@@ -17,6 +17,7 @@ function TPP.Utils.SecondsToHMS(seconds)
     end
 end
 
+-- Session/history color: green < 1h, green→yellow 1-2h, yellow→red 2-3h, red 3h+
 function TPP.Utils.GetColorForTime(seconds)
     if TPP.db and TPP.db.profile and not TPP.db.profile.colorTimer then
         return 0.2, 1.0, 0.2 -- always green
@@ -29,6 +30,22 @@ function TPP.Utils.GetColorForTime(seconds)
     else
         local t = math.min((seconds - 7200) / 3600, 1.0)
         return 1.0, 0.8 - t * 0.8, 0.2 - t * 0.2 -- yellow to red
+    end
+end
+
+-- Today color: green→yellow 0-4h, yellow→red 4-8h, red 8h+
+function TPP.Utils.GetColorForDailyTime(seconds)
+    if TPP.db and TPP.db.profile and not TPP.db.profile.colorTimer then
+        return 0.2, 1.0, 0.2 -- always green
+    end
+    if seconds < 14400 then
+        local t = seconds / 14400
+        return 0.2 + t * 0.8, 1.0 - t * 0.2, 0.2 -- green to yellow over 4h
+    elseif seconds < 28800 then
+        local t = (seconds - 14400) / 14400
+        return 1.0, 0.8 - t * 0.8, 0.2 - t * 0.2 -- yellow to red over 4-8h
+    else
+        return 1.0, 0, 0 -- red 8h+
     end
 end
 

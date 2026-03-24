@@ -78,7 +78,7 @@ function MainUI.UpdateTimeDisplay()
     -- today is the hero
     local todayTotal = Data.GetTodayTotal(TPP.db)
     todayText:SetText(Utils.SecondsToHMS(todayTotal))
-    local r, g, b = Utils.GetColorForTime(todayTotal)
+    local r, g, b = Utils.GetColorForDailyTime(todayTotal)
     todayText:SetTextColor(r, g, b)
 
     -- session is secondary
