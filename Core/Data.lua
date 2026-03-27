@@ -208,12 +208,24 @@ function Data.GetTodayTotal(db, characterFilter)
 
     local total = cache.todayPast
 
-    -- add live session (capped to today)
+    -- add live session
     if Data.isActive and Data.sessionStart then
         local todayMidnight = GetMidnight(now)
-        local sessionDur = Data.GetSessionDuration()
-        local secondsSinceMidnight = now - todayMidnight
-        total = total + math.min(sessionDur, secondsSinceMidnight)
+        if Data.sessionStart >= todayMidnight then
+            -- session started today, no split needed
+            total = total + Data.GetSessionDuration()
+        else
+            -- session spans midnight, use proportional split
+            local afkTotal = Data.afkAccumulated
+            if Data.afkStart then
+                afkTotal = afkTotal + (now - Data.afkStart)
+            end
+            total = total + SessionDayOverlap({
+                startTime = Data.sessionStart,
+                duration = Data.GetSessionDuration(),
+                afkDuration = afkTotal,
+            }, todayMidnight)
+        end
     end
 
     return total
@@ -233,22 +245,53 @@ function Data.GetDailyAverages(db, characterFilter)
     local days = cache.dailyTotals
     local firstDay = cache.firstDay
 
-    -- add live session to today's bucket
-    local liveTodayPortion = 0
+    -- add live session to daily totals
+    local liveDays = {}
     if Data.isActive and Data.sessionStart then
         local todayMidnight = GetMidnight(now)
         local sessionDur = Data.GetSessionDuration()
-        local secondsSinceMidnight = now - todayMidnight
-        liveTodayPortion = math.min(sessionDur, secondsSinceMidnight)
-        if not firstDay or todayKey < firstDay then
-            firstDay = todayKey
+
+        if Data.sessionStart >= todayMidnight then
+            -- session started today, no split needed
+            liveDays[todayKey] = sessionDur
+            if not firstDay or todayKey < firstDay then
+                firstDay = todayKey
+            end
+        else
+            -- session spans midnight, split proportionally
+            local afkTotal = Data.afkAccumulated
+            if Data.afkStart then
+                afkTotal = afkTotal + (now - Data.afkStart)
+            end
+            local liveSession = {
+                startTime = Data.sessionStart,
+                duration = sessionDur,
+                afkDuration = afkTotal,
+            }
+            local dayStart = GetMidnight(Data.sessionStart)
+            while dayStart <= todayMidnight do
+                local portion = SessionDayOverlap(liveSession, dayStart)
+                if portion > 0 then
+                    local dk = date("%Y-%m-%d", dayStart)
+                    liveDays[dk] = portion
+                    if not firstDay or dk < firstDay then
+                        firstDay = dk
+                    end
+                end
+                dayStart = dayStart + 86400
+            end
         end
     end
 
     -- compute total playtime
-    local totalTime = liveTodayPortion
-    for _, dayTotal in pairs(days) do
-        totalTime = totalTime + dayTotal
+    local totalTime = 0
+    for dk, dayTotal in pairs(days) do
+        totalTime = totalTime + dayTotal + (liveDays[dk] or 0)
+    end
+    for dk, liveTotal in pairs(liveDays) do
+        if not days[dk] then
+            totalTime = totalTime + liveTotal
+        end
     end
 
     -- compute overall average across all calendar days since first session
@@ -263,12 +306,8 @@ function Data.GetDailyAverages(db, characterFilter)
     -- compute 7-day average (last 7 calendar days)
     local recentTotal = 0
     for i = 0, 6 do
-        local dayKey = date("%Y-%m-%d", now - i * 86400)
-        if dayKey == todayKey then
-            recentTotal = recentTotal + (days[dayKey] or 0) + liveTodayPortion
-        else
-            recentTotal = recentTotal + (days[dayKey] or 0)
-        end
+        local dk = date("%Y-%m-%d", now - i * 86400)
+        recentTotal = recentTotal + (days[dk] or 0) + (liveDays[dk] or 0)
     end
     local recentAvg = recentTotal / 7
 
