@@ -36,3 +36,4 @@ ignore:
   - .pkgmeta
   - package.py
   - deploy.py
+  - docs
