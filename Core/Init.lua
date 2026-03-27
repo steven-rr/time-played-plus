@@ -8,6 +8,7 @@ local dbDefaults = {
     global = {
         sessions = {},
         pendingSession = nil,
+        serverCheckpoints = {},
     },
     profile = {
         minimap = {
@@ -22,9 +23,6 @@ local dbDefaults = {
 function addon:OnInitialize()
     TPP.db = LibStub("AceDB-3.0"):New("TimePlayed_PlusDB", dbDefaults, true)
 
-    -- recover any pending session from a UI reload
-    TPP.Data.RecoverPendingSession(TPP.db)
-
     -- create UI
     TPP.MainUI.Create()
     TPP.StatsUI.Create()
@@ -36,9 +34,45 @@ function addon:OnInitialize()
 
     -- apply saved scale
     TPP.Utils.ApplyScale(TPP.db.profile.scale)
+end
 
-    -- start tracking
+-- suppress "Total time played" chat message during our request
+local chatFramesUnregistered = {}
+
+local function SuppressChatTimePlayed()
+    for i = 1, 10 do
+        local cf = _G["ChatFrame" .. i]
+        if cf and cf:IsEventRegistered("TIME_PLAYED_MSG") then
+            cf:UnregisterEvent("TIME_PLAYED_MSG")
+            chatFramesUnregistered[cf] = true
+        end
+    end
+end
+
+local function RestoreChatTimePlayed()
+    for cf in pairs(chatFramesUnregistered) do
+        cf:RegisterEvent("TIME_PLAYED_MSG")
+    end
+    chatFramesUnregistered = {}
+end
+
+function addon:OnEnable()
+    -- recover any pending session (player data is now available)
+    TPP.Data.RecoverPendingSession(TPP.db)
+
+    -- start tracking (UnitName/GetRealmName are reliable here)
     TPP.Data.StartSession()
+
+    -- request server time for crash recovery cross-check (delayed to avoid login spam)
+    TPP.Data.serverTimeRequested = true
+    C_Timer.After(5, function()
+        SuppressChatTimePlayed()
+        RequestTimePlayed()
+        -- safety: restore chat frames after 10 seconds in case TIME_PLAYED_MSG never fires
+        C_Timer.After(10, function()
+            RestoreChatTimePlayed()
+        end)
+    end)
 
     -- register slash commands
     local function handleSlash(input)
@@ -59,10 +93,25 @@ local afkFrame = CreateFrame("Frame")
 afkFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 afkFrame:SetScript("OnEvent", function(_, _, unit)
     if unit ~= "player" then return end
-    if UnitIsAFK("player") then
+    local success, isAFK = pcall(UnitIsAFK, "player")
+    if not success then return end
+    if isAFK then
         TPP.Data.OnAFKStart()
     else
         TPP.Data.OnAFKEnd()
+    end
+end)
+
+-- server time cross-check for crash recovery
+local timePlayedFrame = CreateFrame("Frame")
+timePlayedFrame:RegisterEvent("TIME_PLAYED_MSG")
+timePlayedFrame:SetScript("OnEvent", function(_, _, totalTime)
+    if TPP.Data.serverTimeRequested then
+        TPP.Data.serverTimeRequested = false
+        RestoreChatTimePlayed()
+        if totalTime and totalTime > 0 then
+            TPP.Data.OnServerTimePlayed(totalTime, TPP.db)
+        end
     end
 end)
 

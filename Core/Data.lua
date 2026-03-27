@@ -9,21 +9,30 @@ Data.sessionStart = nil
 Data.afkAccumulated = 0
 Data.afkStart = nil
 Data.isActive = false
+Data.character = nil
+Data.serverTimeRequested = false
 
 function Data.StartSession()
     Data.sessionStart = time()
     Data.afkAccumulated = 0
     Data.afkStart = nil
     Data.isActive = true
+    Data.character = TPP.Utils.GetCharacterKey()
+    -- check if player is already AFK (e.g., after /reload while AFK)
+    local success, isAFK = pcall(UnitIsAFK, "player")
+    if success and isAFK then
+        Data.afkStart = Data.sessionStart
+    end
 end
 
 function Data.GetSessionDuration()
     if not Data.sessionStart then return 0 end
-    local elapsed = time() - Data.sessionStart - Data.afkAccumulated
+    local now = time()
+    local afkTotal = Data.afkAccumulated
     if Data.afkStart then
-        elapsed = elapsed - (time() - Data.afkStart)
+        afkTotal = afkTotal + (now - Data.afkStart)
     end
-    return math.max(0, elapsed)
+    return math.max(0, now - Data.sessionStart - afkTotal)
 end
 
 function Data.OnAFKStart()
@@ -34,7 +43,10 @@ end
 
 function Data.OnAFKEnd()
     if Data.afkStart then
-        Data.afkAccumulated = Data.afkAccumulated + (time() - Data.afkStart)
+        local afkDuration = time() - Data.afkStart
+        if afkDuration > 0 then
+            Data.afkAccumulated = Data.afkAccumulated + afkDuration
+        end
         Data.afkStart = nil
     end
 end
@@ -42,13 +54,19 @@ end
 function Data.SaveSession(db)
     if not Data.sessionStart then return end
 
-    local duration = Data.GetSessionDuration()
+    local now = time()
+    local afkTotal = Data.afkAccumulated
+    if Data.afkStart then
+        afkTotal = afkTotal + (now - Data.afkStart)
+    end
+    local duration = now - Data.sessionStart - afkTotal
     if duration < 5 then return end -- don't save trivially short sessions
 
     local session = {
         startTime = Data.sessionStart,
         duration = duration,
-        character = TPP.Utils.GetCharacterKey(),
+        afkDuration = afkTotal,
+        character = Data.character,
     }
 
     table.insert(db.global.sessions, session)
@@ -58,9 +76,17 @@ end
 function Data.SavePendingSession(db)
     if not Data.sessionStart then return end
 
+    local now = time()
+    local afkTotal = Data.afkAccumulated
+    if Data.afkStart then
+        afkTotal = afkTotal + (now - Data.afkStart)
+    end
+
     db.global.pendingSession = {
         startTime = Data.sessionStart,
-        afkAccumulated = Data.afkAccumulated,
+        endTime = now,
+        afkAccumulated = afkTotal,
+        character = Data.character,
     }
 end
 
@@ -68,12 +94,14 @@ function Data.RecoverPendingSession(db)
     local pending = db.global.pendingSession
     if not pending then return end
 
-    local duration = time() - pending.startTime - (pending.afkAccumulated or 0)
+    local endTime = pending.endTime or time()
+    local duration = endTime - pending.startTime - (pending.afkAccumulated or 0)
     if duration > 5 then
         local session = {
             startTime = pending.startTime,
             duration = duration,
-            character = TPP.Utils.GetCharacterKey(),
+            afkDuration = pending.afkAccumulated or 0,
+            character = pending.character or TPP.Utils.GetCharacterKey(),
         }
         table.insert(db.global.sessions, session)
     end
@@ -185,4 +213,63 @@ function Data.GetCSV(db, characterFilter)
         ))
     end
     return table.concat(lines, "\n")
+end
+
+-- Crash recovery via server time cross-check
+local CRASH_THRESHOLD = 600 -- 10 minutes
+local CRASH_MAX_RECOVERY = 28800 -- 8 hours max recovery (same cap as TimeTracker)
+
+function Data.OnServerTimePlayed(serverTotal, db)
+    local character = Data.character
+    if not character or not db then return end
+
+    -- initialize per-character checkpoint table
+    if not db.global.serverCheckpoints then
+        db.global.serverCheckpoints = {}
+    end
+
+    local checkpoint = db.global.serverCheckpoints[character]
+
+    if checkpoint and checkpoint.serverTotal then
+        local serverDiff = serverTotal - checkpoint.serverTotal
+
+        if serverDiff > 0 then
+            -- sum our recorded sessions + afk since last checkpoint
+            local accounted = 0
+            for _, session in ipairs(db.global.sessions) do
+                if session.character == character and session.startTime >= checkpoint.timestamp then
+                    accounted = accounted + session.duration + (session.afkDuration or 0)
+                end
+            end
+
+            local gap = serverDiff - accounted
+            if gap >= CRASH_THRESHOLD and gap < CRASH_MAX_RECOVERY then
+                -- unaccounted time — likely a crashed session
+                -- estimate start time: use the latest session end for this character, or checkpoint time
+                local latestEnd = checkpoint.timestamp
+                for _, session in ipairs(db.global.sessions) do
+                    if session.character == character then
+                        local sessionEnd = session.startTime + session.duration + (session.afkDuration or 0)
+                        if sessionEnd > latestEnd then
+                            latestEnd = sessionEnd
+                        end
+                    end
+                end
+                local recoveredSession = {
+                    startTime = latestEnd,
+                    duration = gap,
+                    afkDuration = 0,
+                    character = character,
+                    recovered = true,
+                }
+                table.insert(db.global.sessions, recoveredSession)
+            end
+        end
+    end
+
+    -- update checkpoint (use session start time so sessions are properly matched)
+    db.global.serverCheckpoints[character] = {
+        serverTotal = serverTotal,
+        timestamp = Data.sessionStart or time(),
+    }
 end

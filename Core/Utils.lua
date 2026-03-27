@@ -72,7 +72,10 @@ function TPP.Utils.FormatDateTime(timestamp)
 end
 
 function TPP.Utils.GetCharacterKey()
-    return UnitName("player") .. " - " .. GetRealmName()
+    local name = UnitName("player")
+    local realm = GetRealmName()
+    if not name or not realm then return "Unknown" end
+    return name .. " - " .. realm
 end
 
 function TPP.Utils.GetDayKey(timestamp)

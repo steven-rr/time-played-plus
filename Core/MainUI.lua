@@ -90,7 +90,9 @@ end
 
 function MainUI.Toggle()
     if mainFrame:IsShown() then
-        mainFrame:Hide()
+        for _, frame in ipairs(TPP.frames) do
+            frame:Hide()
+        end
     else
         MainUI.UpdateTimeDisplay()
         mainFrame:Show()
