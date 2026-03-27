@@ -55,6 +55,7 @@ function MainUI.Create()
     charCheckbox.text:SetText("Current character only")
     charCheckbox:SetScript("OnClick", function(self)
         TPP.characterFilter = self:GetChecked() and Utils.GetCharacterKey() or nil
+        MainUI.UpdateTimeDisplay()
         if TPP.StatsUI.Refresh then TPP.StatsUI.Refresh() end
         if TPP.HistoryUI.Refresh then TPP.HistoryUI.Refresh() end
     end)
@@ -76,7 +77,7 @@ function MainUI.UpdateTimeDisplay()
     if not todayText or not TPP.db then return end
 
     -- today is the hero
-    local todayTotal = Data.GetTodayTotal(TPP.db)
+    local todayTotal = Data.GetTodayTotal(TPP.db, TPP.characterFilter)
     todayText:SetText(Utils.SecondsToHMS(todayTotal))
     local r, g, b = Utils.GetColorForDailyTime(todayTotal)
     todayText:SetTextColor(r, g, b)

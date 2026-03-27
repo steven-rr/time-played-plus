@@ -23,7 +23,7 @@ function Minimap.Setup(db)
         end,
         OnTooltipShow = function(tooltip)
             local sessionDuration = Data.GetSessionDuration()
-            local todayTotal = Data.GetTodayTotal(db)
+            local todayTotal = Data.GetTodayTotal(db, TPP.characterFilter)
 
             local todayColor = Utils.GetColorHexForDailyTime(todayTotal)
 

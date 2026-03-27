@@ -61,6 +61,7 @@ function Options.GetOptionsTable()
                 func = function()
                     TPP.db.global.sessions = {}
                     TPP.db.global.serverCheckpoints = {}
+                    TPP.Data.InvalidateCache()
                     if TPP.HistoryUI.Refresh then TPP.HistoryUI.Refresh() end
                     if TPP.StatsUI.Refresh then TPP.StatsUI.Refresh() end
                     print("|cffffd100TimePlayed+|r: Session history cleared.")

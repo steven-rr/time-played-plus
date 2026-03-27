@@ -46,7 +46,7 @@ end
 function StatsUI.Refresh()
     if not statsFrame or not TPP.db then return end
 
-    local overallAvg, recentAvg = Data.GetDailyAverages(TPP.db)
+    local overallAvg, recentAvg = Data.GetDailyAverages(TPP.db, TPP.characterFilter)
     local longest = Data.GetLongestSession(TPP.db, TPP.characterFilter)
 
     avgText:SetText(Utils.GetColorHexForTime(overallAvg) .. Utils.SecondsToHMS(overallAvg) .. "|r")

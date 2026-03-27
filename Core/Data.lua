@@ -12,6 +12,90 @@ Data.isActive = false
 Data.character = nil
 Data.serverTimeRequested = false
 
+-- Cache to avoid full session scan every second
+local cache = {
+    dayKey = nil,
+    todayPast = 0,
+    dailyTotals = nil,
+    firstDay = nil,
+    dirty = true,
+    sessionCount = 0,
+    characterFilter = nil,
+}
+
+local function GetMidnight(timestamp)
+    local t = date("*t", timestamp)
+    return time({ year = t.year, month = t.month, day = t.day, hour = 0 })
+end
+
+-- Compute how much active time a session contributes to a given day
+local function SessionDayOverlap(session, dayStart)
+    local dayEnd = dayStart + 86400
+    local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
+    local overlapStart = math.max(session.startTime, dayStart)
+    local overlapEnd = math.min(wallEnd, dayEnd)
+    if overlapEnd <= overlapStart then return 0 end
+    local wallDuration = wallEnd - session.startTime
+    if wallDuration <= 0 then return 0 end
+    return session.duration * (overlapEnd - overlapStart) / wallDuration
+end
+
+local function RebuildCache(db, characterFilter)
+    local now = time()
+    local todayMidnight = GetMidnight(now)
+    local todayKey = date("%Y-%m-%d", now)
+
+    local todayPast = 0
+    local days = {}
+    local firstDay = nil
+
+    for _, session in ipairs(db.global.sessions) do
+        if not characterFilter or session.character == characterFilter then
+            -- today's total (with midnight split)
+            local overlap = SessionDayOverlap(session, todayMidnight)
+            if overlap > 0 then
+                todayPast = todayPast + overlap
+            end
+
+            -- daily totals for averages (split across day boundaries)
+            local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
+            local startMidnight = GetMidnight(session.startTime)
+            local endMidnight = GetMidnight(wallEnd)
+
+            if startMidnight == endMidnight then
+                -- session within one day (common case)
+                local dk = date("%Y-%m-%d", session.startTime)
+                days[dk] = (days[dk] or 0) + session.duration
+                if not firstDay or dk < firstDay then firstDay = dk end
+            else
+                -- session spans midnight — split proportionally
+                local dayStart = startMidnight
+                while dayStart <= endMidnight do
+                    local portion = SessionDayOverlap(session, dayStart)
+                    if portion > 0 then
+                        local dk = date("%Y-%m-%d", dayStart)
+                        days[dk] = (days[dk] or 0) + portion
+                        if not firstDay or dk < firstDay then firstDay = dk end
+                    end
+                    dayStart = dayStart + 86400
+                end
+            end
+        end
+    end
+
+    cache.dayKey = todayKey
+    cache.todayPast = todayPast
+    cache.dailyTotals = days
+    cache.firstDay = firstDay
+    cache.dirty = false
+    cache.sessionCount = #db.global.sessions
+    cache.characterFilter = characterFilter
+end
+
+function Data.InvalidateCache()
+    cache.dirty = true
+end
+
 function Data.StartSession()
     Data.sessionStart = time()
     Data.afkAccumulated = 0
@@ -71,6 +155,7 @@ function Data.SaveSession(db)
 
     table.insert(db.global.sessions, session)
     Data.isActive = false
+    Data.InvalidateCache()
 end
 
 function Data.SavePendingSession(db)
@@ -104,71 +189,86 @@ function Data.RecoverPendingSession(db)
             character = pending.character or TPP.Utils.GetCharacterKey(),
         }
         table.insert(db.global.sessions, session)
+        Data.InvalidateCache()
     end
 
     db.global.pendingSession = nil
 end
 
-function Data.GetTodayTotal(db)
-    local todayKey = TPP.Utils.GetDayKey(time())
-    local total = 0
+function Data.GetTodayTotal(db, characterFilter)
+    local now = time()
+    local todayKey = date("%Y-%m-%d", now)
 
-    for _, session in ipairs(db.global.sessions) do
-        if TPP.Utils.GetDayKey(session.startTime) == todayKey then
-            total = total + session.duration
-        end
+    -- rebuild cache if needed
+    if cache.dirty or cache.dayKey ~= todayKey
+        or cache.sessionCount ~= #db.global.sessions
+        or cache.characterFilter ~= characterFilter then
+        RebuildCache(db, characterFilter)
     end
 
-    -- add current active session
-    if Data.isActive then
-        total = total + Data.GetSessionDuration()
+    local total = cache.todayPast
+
+    -- add live session (capped to today)
+    if Data.isActive and Data.sessionStart then
+        local todayMidnight = GetMidnight(now)
+        local sessionDur = Data.GetSessionDuration()
+        local secondsSinceMidnight = now - todayMidnight
+        total = total + math.min(sessionDur, secondsSinceMidnight)
     end
 
     return total
 end
 
-function Data.GetDailyAverages(db)
-    local days = {}
-    local firstDay = nil
+function Data.GetDailyAverages(db, characterFilter)
+    local now = time()
+    local todayKey = date("%Y-%m-%d", now)
 
-    for _, session in ipairs(db.global.sessions) do
-        local dayKey = TPP.Utils.GetDayKey(session.startTime)
-        days[dayKey] = (days[dayKey] or 0) + session.duration
-        if not firstDay or dayKey < firstDay then
-            firstDay = dayKey
-        end
+    -- rebuild cache if needed
+    if cache.dirty or cache.dayKey ~= todayKey
+        or cache.sessionCount ~= #db.global.sessions
+        or cache.characterFilter ~= characterFilter then
+        RebuildCache(db, characterFilter)
     end
 
-    -- add current session to today
-    if Data.isActive then
-        local todayKey = TPP.Utils.GetDayKey(time())
-        days[todayKey] = (days[todayKey] or 0) + Data.GetSessionDuration()
+    local days = cache.dailyTotals
+    local firstDay = cache.firstDay
+
+    -- add live session to today's bucket
+    local liveTodayPortion = 0
+    if Data.isActive and Data.sessionStart then
+        local todayMidnight = GetMidnight(now)
+        local sessionDur = Data.GetSessionDuration()
+        local secondsSinceMidnight = now - todayMidnight
+        liveTodayPortion = math.min(sessionDur, secondsSinceMidnight)
         if not firstDay or todayKey < firstDay then
             firstDay = todayKey
         end
     end
 
     -- compute total playtime
-    local totalTime = 0
+    local totalTime = liveTodayPortion
     for _, dayTotal in pairs(days) do
         totalTime = totalTime + dayTotal
     end
 
     -- compute overall average across all calendar days since first session
-    local todayKey = TPP.Utils.GetDayKey(time())
     local calendarDays = 1
     if firstDay and firstDay ~= todayKey then
         local fy, fm, fd = firstDay:match("(%d+)-(%d+)-(%d+)")
         local firstTimestamp = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd) })
-        calendarDays = math.floor((time() - firstTimestamp) / 86400) + 1
+        calendarDays = math.floor((now - firstTimestamp) / 86400) + 1
     end
     local overallAvg = calendarDays > 0 and (totalTime / calendarDays) or 0
 
     -- compute 7-day average (last 7 calendar days)
     local recentTotal = 0
     for i = 0, 6 do
-        local dayKey = TPP.Utils.GetDayKey(time() - i * 86400)
-        recentTotal = recentTotal + (days[dayKey] or 0)
+        local dayKey = date("%Y-%m-%d", now - i * 86400)
+        if dayKey == todayKey then
+            recentTotal = recentTotal + (days[dayKey] or 0) + liveTodayPortion
+        else
+            recentTotal = recentTotal + (days[dayKey] or 0)
+        end
     end
     local recentAvg = recentTotal / 7
 
@@ -263,6 +363,7 @@ function Data.OnServerTimePlayed(serverTotal, db)
                     recovered = true,
                 }
                 table.insert(db.global.sessions, recoveredSession)
+                Data.InvalidateCache()
             end
         end
     end
