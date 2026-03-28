@@ -420,7 +420,7 @@ end
 
 -- Crash recovery via server time cross-check
 local CRASH_THRESHOLD = 600 -- 10 minutes
-local CRASH_MAX_RECOVERY = 28800 -- 8 hours max recovery (same cap as TimeTracker)
+local CRASH_MAX_RECOVERY = 28800 -- 8 hours max recovery
 
 function Data.OnServerTimePlayed(serverTotal, db)
     local character = Data.character
