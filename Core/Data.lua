@@ -16,6 +16,7 @@ Data.serverTimeRequested = false
 local cache = {
     dayKey = nil,
     todayPast = 0,
+    weeklyPast = 0,
     dailyTotals = nil,
     firstDay = nil,
     dirty = true,
@@ -40,25 +41,57 @@ local function SessionDayOverlap(session, dayStart)
     return session.duration * (overlapEnd - overlapStart) / wallDuration
 end
 
+-- Weekly reset: Tuesday 15:00 UTC (10 AM EDT / 7 AM PDT)
+local function GetLastWeeklyReset()
+    local now = time()
+    local t = date("!*t", now)
+    -- wday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+    local daysSinceTuesday = (t.wday - 3) % 7
+    -- go back to last Tuesday midnight UTC, then add 15 hours
+    local tuesdayMidnight = now - daysSinceTuesday * 86400 - t.hour * 3600 - t.min * 60 - t.sec
+    local resetTime = tuesdayMidnight + 15 * 3600
+    -- if we haven't hit reset time yet today (and today is Tuesday), go back a week
+    if resetTime > now then
+        resetTime = resetTime - 7 * 86400
+    end
+    return resetTime
+end
+
 local function RebuildCache(db, characterFilter)
     local now = time()
     local todayMidnight = GetMidnight(now)
     local todayKey = date("%Y-%m-%d", now)
 
     local todayPast = 0
+    local weeklyPast = 0
+    local resetTime = GetLastWeeklyReset()
     local days = {}
     local firstDay = nil
 
     for _, session in ipairs(db.global.sessions) do
         if not characterFilter or session.character == characterFilter then
+            local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
+
             -- today's total (with midnight split)
             local overlap = SessionDayOverlap(session, todayMidnight)
             if overlap > 0 then
                 todayPast = todayPast + overlap
             end
 
+            -- weekly total (since Tuesday reset)
+            if wallEnd > resetTime then
+                if session.startTime >= resetTime then
+                    weeklyPast = weeklyPast + session.duration
+                else
+                    local wallDuration = wallEnd - session.startTime
+                    if wallDuration > 0 then
+                        local weekOverlap = wallEnd - resetTime
+                        weeklyPast = weeklyPast + session.duration * weekOverlap / wallDuration
+                    end
+                end
+            end
+
             -- daily totals for averages (split across day boundaries)
-            local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
             local startMidnight = GetMidnight(session.startTime)
             local endMidnight = GetMidnight(wallEnd)
 
@@ -85,6 +118,7 @@ local function RebuildCache(db, characterFilter)
 
     cache.dayKey = todayKey
     cache.todayPast = todayPast
+    cache.weeklyPast = weeklyPast
     cache.dailyTotals = days
     cache.firstDay = firstDay
     cache.dirty = false
@@ -102,11 +136,6 @@ function Data.StartSession()
     Data.afkStart = nil
     Data.isActive = true
     Data.character = TPP.Utils.GetCharacterKey()
-    -- check if player is already AFK (e.g., after /reload while AFK)
-    local success, isAFK = pcall(UnitIsAFK, "player")
-    if success and isAFK then
-        Data.afkStart = Data.sessionStart
-    end
 end
 
 function Data.GetSessionDuration()
@@ -352,6 +381,41 @@ function Data.GetCSV(db, characterFilter)
         ))
     end
     return table.concat(lines, "\n")
+end
+
+function Data.GetWeeklyTotal(db, characterFilter)
+    local now = time()
+    local todayKey = date("%Y-%m-%d", now)
+
+    -- rebuild cache if needed
+    if cache.dirty or cache.dayKey ~= todayKey
+        or cache.sessionCount ~= #db.global.sessions
+        or cache.characterFilter ~= characterFilter then
+        RebuildCache(db, characterFilter)
+    end
+
+    local total = cache.weeklyPast
+
+    -- add live session
+    if Data.isActive and Data.sessionStart then
+        local resetTime = GetLastWeeklyReset()
+        local sessionDur = Data.GetSessionDuration()
+        if Data.sessionStart >= resetTime then
+            total = total + sessionDur
+        else
+            local afkTotal = Data.afkAccumulated
+            if Data.afkStart then
+                afkTotal = afkTotal + (now - Data.afkStart)
+            end
+            local wallDuration = now - Data.sessionStart
+            if wallDuration > 0 then
+                local overlap = now - resetTime
+                total = total + sessionDur * overlap / wallDuration
+            end
+        end
+    end
+
+    return total
 end
 
 -- Crash recovery via server time cross-check

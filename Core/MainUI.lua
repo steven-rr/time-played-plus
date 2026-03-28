@@ -6,10 +6,10 @@ local MainUI = TPP.MainUI
 local Utils = TPP.Utils
 local Data = TPP.Data
 
-local mainFrame, timeText, todayText, charCheckbox
+local mainFrame, timeText, todayText, weekText, charCheckbox
 
 function MainUI.Create()
-    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 180)
+    mainFrame = Utils.CreateStyledFrame("TimePlayed+MainFrame", 260, 198)
     if not (TPP.db and TPP.db.profile and TPP.db.profile.positions["TimePlayed+MainFrame"]) then
         mainFrame:ClearAllPoints()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
@@ -33,16 +33,21 @@ function MainUI.Create()
     timeText:SetText("Session: 0s")
     timeText:SetTextColor(0.6, 0.6, 0.6)
 
+    -- weekly reset time
+    weekText = Utils.CreateFontString(mainFrame, 10, "TOP", timeText, "BOTTOM", 0, -4)
+    weekText:SetText("This week: 0s")
+    weekText:SetTextColor(0.6, 0.6, 0.6)
+
     -- buttons
     local statsBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
     statsBtn:SetSize(110, 24)
-    statsBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 16, -106)
+    statsBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 16, -124)
     statsBtn:SetText("Stats")
     statsBtn:SetScript("OnClick", function() TPP.StatsUI.Toggle() end)
 
     local historyBtn = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
     historyBtn:SetSize(110, 24)
-    historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -106)
+    historyBtn:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -16, -124)
     historyBtn:SetText("History")
     historyBtn:SetScript("OnClick", function() TPP.HistoryUI.Toggle() end)
 
@@ -86,6 +91,12 @@ function MainUI.UpdateTimeDisplay()
     if timeText then
         local duration = Data.GetSessionDuration()
         timeText:SetText("Session: " .. Utils.SecondsToHMS(duration))
+    end
+
+    -- weekly total
+    if weekText then
+        local weekTotal = Data.GetWeeklyTotal(TPP.db, TPP.characterFilter)
+        weekText:SetText("This week: " .. Utils.SecondsToHMS(weekTotal))
     end
 end
 

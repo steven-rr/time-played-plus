@@ -89,11 +89,28 @@ function addon:OnEnable()
 end
 
 -- AFK tracking
+local function SafeUnitIsAFK()
+    local success, result = pcall(function()
+        if UnitIsAFK("player") then return true end
+        return false
+    end)
+    return success, (success and result)
+end
+
 local afkFrame = CreateFrame("Frame")
 afkFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
-afkFrame:SetScript("OnEvent", function(_, _, unit)
+afkFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+afkFrame:SetScript("OnEvent", function(_, event, unit)
+    if event == "PLAYER_ENTERING_WORLD" then
+        afkFrame:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        local success, isAFK = SafeUnitIsAFK()
+        if success and isAFK and TPP.Data.sessionStart then
+            TPP.Data.afkStart = TPP.Data.sessionStart
+        end
+        return
+    end
     if unit ~= "player" then return end
-    local success, isAFK = pcall(UnitIsAFK, "player")
+    local success, isAFK = SafeUnitIsAFK()
     if not success then return end
     if isAFK then
         TPP.Data.OnAFKStart()
