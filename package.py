@@ -19,9 +19,15 @@ EXCLUDE = {
     ".git",
     ".gitignore",
     ".pkgmeta",
+    ".github",
+    ".claude",
+    ".DS_Store",
     "README.md",
     "LICENSE",
     "package.py",
+    "deploy.py",
+    "docs",
+    "textures",
 }
 
 # File extensions to exclude
@@ -29,6 +35,7 @@ EXCLUDE_EXT = {
     ".zip",
     ".md",
     ".py",
+    ".txt",
 }
 
 
