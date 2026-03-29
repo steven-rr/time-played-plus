@@ -49,9 +49,9 @@ function StatsUI.Refresh()
     local overallAvg, recentAvg = Data.GetDailyAverages(TPP.db, TPP.characterFilter)
     local longest = Data.GetLongestSession(TPP.db, TPP.characterFilter)
 
-    avgText:SetText(Utils.GetColorHexForTime(overallAvg) .. Utils.SecondsToHMS(overallAvg) .. "|r")
-    recentAvgText:SetText(Utils.GetColorHexForTime(recentAvg) .. Utils.SecondsToHMS(recentAvg) .. "|r")
-    longestText:SetText(Utils.GetColorHexForTime(longest) .. Utils.SecondsToHMS(longest) .. "|r")
+    avgText:SetText(Utils.GetColorHexForDailyTime(overallAvg) .. Utils.SecondsToHMS(overallAvg) .. "|r")
+    recentAvgText:SetText(Utils.GetColorHexForDailyTime(recentAvg) .. Utils.SecondsToHMS(recentAvg) .. "|r")
+    longestText:SetText(Utils.GetColorHexForDailyTime(longest) .. Utils.SecondsToHMS(longest) .. "|r")
 end
 
 function StatsUI.Toggle()

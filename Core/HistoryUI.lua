@@ -118,7 +118,7 @@ function HistoryUI.UpdateRows()
             row.duration:SetText(Utils.SecondsToHMS(session.duration))
             row.character:SetText(session.character)
 
-            local r, g, b = Utils.GetColorForTime(session.duration)
+            local r, g, b = Utils.GetColorForDailyTime(session.duration)
             row.duration:SetTextColor(r, g, b)
             row.date:SetTextColor(1, 1, 1)
             row.time:SetTextColor(1, 1, 1)
