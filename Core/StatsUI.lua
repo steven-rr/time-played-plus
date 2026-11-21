@@ -6,7 +6,7 @@ local StatsUI = TPP.StatsUI
 local Utils = TPP.Utils
 local Data = TPP.Data
 
-local statsFrame, avgText, recentAvgText, longestText
+local statsFrame, periodText, avgText, recentAvgText, longestText
 
 function StatsUI.Create()
     statsFrame = Utils.CreateStyledFrame("TimePlayed+StatsFrame", 300, 160)
@@ -15,8 +15,12 @@ function StatsUI.Create()
     title:SetText("Playtime Stats")
     title:SetTextColor(1, 0.82, 0)
 
+    -- which period the daily average and the longest session cover
+    periodText = Utils.CreateFontString(statsFrame, 9, "TOP", title, "BOTTOM", 0, -4)
+    periodText:SetTextColor(0.6, 0.6, 0.6)
+
     -- daily average
-    local avgLabel = Utils.CreateFontString(statsFrame, 10, "TOPLEFT", statsFrame, "TOPLEFT", 16, -36)
+    local avgLabel = Utils.CreateFontString(statsFrame, 10, "TOPLEFT", statsFrame, "TOPLEFT", 16, -50)
     avgLabel:SetText("Daily Average:")
     avgText = Utils.CreateFontString(statsFrame, 10, "LEFT", avgLabel, "RIGHT", 8, 0)
 
@@ -45,6 +49,11 @@ end
 
 function StatsUI.Refresh()
     if not statsFrame or not TPP.db then return end
+
+    local seasonStart = Data.GetSeasonStart(TPP.db)
+    periodText:SetText(seasonStart
+        and ((Data.GetSeasonName() or "This season") .. ", since " .. Utils.FormatDate(seasonStart))
+        or "All time")
 
     local overallAvg, recentAvg = Data.GetDailyAverages(TPP.db, TPP.characterFilter)
     local longest = Data.GetLongestSession(TPP.db, TPP.characterFilter)

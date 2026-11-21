@@ -169,6 +169,46 @@ function Data.InvalidateCache()
     cache.dirty = true
 end
 
+-- Seasons whose start is known: each began at the weekly reset of the week starting at this moment (UTC).
+-- Used once, for a season already under way when the addon first sees it.
+local KNOWN_SEASON_WEEK = {
+    [37] = 1787011200, -- Midnight Season 2: week of August 18, 2026
+}
+
+-- The game says which season it is, not when it began. Remember the number; when a higher one
+-- appears, the season stats start over with the session in which it was first seen.
+-- Retail only (interface 100000 and up): every other game version keeps all-time stats.
+function Data.CheckSeason(db)
+    if (select(4, GetBuildInfo()) or 0) < 100000 then return end
+    local ok, id = pcall(function() return C_SeasonInfo.GetCurrentDisplaySeasonID() end)
+    if not ok or type(id) ~= "number" or id <= 0 then return end
+    local season = db.global.season
+    if not season or id > season.id then
+        local start = Data.sessionStart or time()
+        local week = not season and KNOWN_SEASON_WEEK[id]
+        if week then
+            local reset = GetLastWeeklyReset()
+            if reset > week then
+                start = reset - math.floor((reset - week) / 604800) * 604800
+            end
+        end
+        db.global.season = { id = id, start = start }
+    end
+end
+
+-- start of the day the current season began, or nil where no season is tracked (anything but retail);
+-- the daily average and the longest session count from here
+function Data.GetSeasonStart(db)
+    local season = db.global.season
+    return season and GetDayStart(season.start) or nil
+end
+
+-- the game's own name for the current season, such as "Midnight Season 2"; nil if it gives none
+function Data.GetSeasonName()
+    local ok, name = pcall(function() return PVPUtil.GetCurrentSeasonText() end)
+    return ok and type(name) == "string" and name ~= "" and name or nil
+end
+
 function Data.StartSession()
     Data.sessionStart = time()
     Data.lastBeat = Data.sessionStart
@@ -367,15 +407,28 @@ function Data.GetDailyAverages(db, characterFilter)
         end
     end
 
+    -- where the game has seasons, the overall average covers the current season only,
+    -- counted from the first day played in it
+    local seasonStart = Data.GetSeasonStart(db)
+    local seasonDay = seasonStart and date("%Y-%m-%d", seasonStart)
+    local seasonFirst = nil
+
     -- compute total playtime
     local totalTime = 0
     for dk, dayTotal in pairs(days) do
-        totalTime = totalTime + dayTotal + (liveDays[dk] or 0)
+        if not seasonDay or dk >= seasonDay then
+            totalTime = totalTime + dayTotal + (liveDays[dk] or 0)
+            if not seasonFirst or dk < seasonFirst then seasonFirst = dk end
+        end
     end
     for dk, liveTotal in pairs(liveDays) do
-        if not days[dk] then
+        if not days[dk] and (not seasonDay or dk >= seasonDay) then
             totalTime = totalTime + liveTotal
+            if not seasonFirst or dk < seasonFirst then seasonFirst = dk end
         end
+    end
+    if seasonDay then
+        firstDay = seasonFirst
     end
 
     -- compute overall average across every day since the first session, today included
@@ -399,9 +452,11 @@ function Data.GetDailyAverages(db, characterFilter)
 end
 
 function Data.GetLongestSession(db, characterFilter)
+    local seasonStart = Data.GetSeasonStart(db)
     local longest = 0
     for _, session in ipairs(db.global.sessions) do
-        if not characterFilter or session.character == characterFilter then
+        if (not characterFilter or session.character == characterFilter)
+            and (not seasonStart or session.startTime >= seasonStart) then
             if session.duration > longest then
                 longest = session.duration
             end

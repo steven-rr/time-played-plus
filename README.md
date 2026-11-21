@@ -16,7 +16,7 @@ WoW's built-in `/played` command gives you a single lifetime total — a massive
 A real-time display of your current session. The timer color gradually shifts from green to yellow to red the longer you play — a subtle reminder when you've been at it a while.
 
 **Daily & Weekly Stats**
-See your playtime for today, your daily average, and a rolling 7-day average. Useful for understanding your play habits at a glance.
+See your playtime for today, your daily average, and a rolling 7-day average. Useful for understanding your play habits at a glance. On Retail, the daily average and longest session cover the current season, so last season's numbers don't linger.
 
 **Full Session History**
 A scrollable log of every session — date, start time, duration, and which character you were on. Filter by character to see where your time is going.
