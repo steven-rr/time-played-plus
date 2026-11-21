@@ -400,6 +400,26 @@ function Data.GetSessions(db, characterFilter)
     return sessions
 end
 
+-- remove one session (the same table GetSessions returned); returns true if it was found
+function Data.DeleteSession(db, session)
+    for i, s in ipairs(db.global.sessions) do
+        if s == session then
+            table.remove(db.global.sessions, i)
+            -- if the server check hasn't moved past this session yet, count its time as settled,
+            -- otherwise the next login would add it back as a recovered session
+            local checkpoint = db.global.serverCheckpoints and db.global.serverCheckpoints[session.character]
+            if checkpoint and checkpoint.serverTotal and checkpoint.timestamp
+                and session.startTime >= checkpoint.timestamp then
+                checkpoint.serverTotal = checkpoint.serverTotal + session.duration
+                    + (session.afkDuration or 0) - (session.gapDuration or 0)
+            end
+            Data.InvalidateCache()
+            return true
+        end
+    end
+    return false
+end
+
 function Data.GetCSV(db, characterFilter)
     local lines = { "Date,Start Time,Character,Duration (seconds)" }
     local sessions = Data.GetSessions(db, characterFilter)

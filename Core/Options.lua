@@ -51,11 +51,18 @@ function Options.GetOptionsTable()
                 name = "Data",
                 order = 10,
             },
+            editHistory = {
+                type = "execute",
+                name = "Edit Session History",
+                desc = "Open the session history with a delete control on each entry. Closing the window turns editing off.",
+                order = 11,
+                func = function() TPP.HistoryUI.OpenForEdit() end,
+            },
             deleteHistory = {
                 type = "execute",
                 name = "Delete All Session History",
                 desc = "Permanently delete all recorded sessions for every character",
-                order = 11,
+                order = 12,
                 confirm = true,
                 confirmText = "Are you sure? This will delete all session history for ALL characters and cannot be undone.",
                 func = function()
