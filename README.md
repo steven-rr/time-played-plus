@@ -48,8 +48,7 @@ Export your full session history to a spreadsheet-friendly format for deeper ana
 ## Compatibility
 
 - WoW Retail
-- WoW Classic
-- WoW Cataclysm Classic
+- WoW Forever (beta)
 
 ## License
 

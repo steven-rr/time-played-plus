@@ -1,4 +1,4 @@
-## Interface: 120105, 120107
+## Interface: 120105, 120107, 16001
 ## Title: TimePlayed+
 ## Notes: A lightweight addon that tracks how long you actually play each session, with stats and history across all your characters.
 ## Author: stevenrivadeneira

@@ -66,9 +66,13 @@ function TPP.Utils.FormatDateTime(timestamp)
 end
 
 function TPP.Utils.GetCharacterKey()
-    local name = UnitName("player")
+    local name, surname = UnitName("player")
     local realm = GetRealmName()
     if not name or not realm then return "Unknown" end
+    if realm == "" then
+        -- a game without realms: the surname tells characters apart
+        return (surname and surname ~= "") and (name .. " " .. surname) or name
+    end
     return name .. " - " .. realm
 end
 
