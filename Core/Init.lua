@@ -75,6 +75,8 @@ function addon:OnEnable()
         -- safety: restore chat frames after 10 seconds in case TIME_PLAYED_MSG never fires
         C_Timer.After(10, function()
             RestoreChatTimePlayed()
+            -- a reply that arrives later than this no longer describes the moment of login; ignore it
+            TPP.Data.serverTimeRequested = false
         end)
     end)
 

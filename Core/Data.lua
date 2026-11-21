@@ -41,9 +41,23 @@ local cache = {
     characterFilter = nil,
 }
 
-local function GetMidnight(timestamp)
+-- a day runs from 6 AM to 6 AM, so a late night counts toward the evening it started in
+local DAY_START_HOUR = 6
+
+-- the start (6 AM) of the day a moment belongs to
+local function GetDayStart(timestamp)
     local t = date("*t", timestamp)
-    return time({ year = t.year, month = t.month, day = t.day, hour = 0 })
+    local start = time({ year = t.year, month = t.month, day = t.day, hour = DAY_START_HOUR })
+    if timestamp < start then
+        -- before 6 AM it is still the previous day; step back 12 hours to land safely inside it
+        t = date("*t", start - 12 * 3600)
+        start = time({ year = t.year, month = t.month, day = t.day, hour = DAY_START_HOUR })
+    end
+    return start
+end
+
+local function GetDayKey(timestamp)
+    return date("%Y-%m-%d", GetDayStart(timestamp))
 end
 
 -- Compute how much active time a session contributes to a given day
@@ -84,8 +98,8 @@ end
 
 local function RebuildCache(db, characterFilter)
     local now = time()
-    local todayMidnight = GetMidnight(now)
-    local todayKey = date("%Y-%m-%d", now)
+    local todayStart = GetDayStart(now)
+    local todayKey = date("%Y-%m-%d", todayStart)
 
     local todayPast = 0
     local weeklyPast = 0
@@ -97,8 +111,8 @@ local function RebuildCache(db, characterFilter)
         if not characterFilter or session.character == characterFilter then
             local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
 
-            -- today's total (with midnight split)
-            local overlap = SessionDayOverlap(session, todayMidnight)
+            -- today's total (split at the day boundary)
+            local overlap = SessionDayOverlap(session, todayStart)
             if overlap > 0 then
                 todayPast = todayPast + overlap
             end
@@ -117,18 +131,18 @@ local function RebuildCache(db, characterFilter)
             end
 
             -- daily totals for averages (split across day boundaries)
-            local startMidnight = GetMidnight(session.startTime)
-            local endMidnight = GetMidnight(wallEnd)
+            local startDay = GetDayStart(session.startTime)
+            local endDay = GetDayStart(wallEnd)
 
-            if startMidnight == endMidnight then
+            if startDay == endDay then
                 -- session within one day (common case)
-                local dk = date("%Y-%m-%d", session.startTime)
+                local dk = date("%Y-%m-%d", startDay)
                 days[dk] = (days[dk] or 0) + session.duration
                 if not firstDay or dk < firstDay then firstDay = dk end
             else
-                -- session spans midnight — split proportionally
-                local dayStart = startMidnight
-                while dayStart <= endMidnight do
+                -- session crosses a day boundary — split proportionally
+                local dayStart = startDay
+                while dayStart <= endDay do
                     local portion = SessionDayOverlap(session, dayStart)
                     if portion > 0 then
                         local dk = date("%Y-%m-%d", dayStart)
@@ -267,7 +281,7 @@ end
 
 function Data.GetTodayTotal(db, characterFilter)
     local now = time()
-    local todayKey = date("%Y-%m-%d", now)
+    local todayKey = GetDayKey(now)
 
     -- rebuild cache if needed
     if cache.dirty or cache.dayKey ~= todayKey
@@ -280,12 +294,12 @@ function Data.GetTodayTotal(db, characterFilter)
 
     -- add live session
     if Data.isActive and Data.sessionStart then
-        local todayMidnight = GetMidnight(now)
-        if Data.sessionStart >= todayMidnight then
+        local todayStart = GetDayStart(now)
+        if Data.sessionStart >= todayStart then
             -- session started today, no split needed
             total = total + Data.GetSessionDuration()
         else
-            -- session spans midnight, use proportional split
+            -- session started before today, use proportional split
             local afkTotal = Data.afkAccumulated
             if Data.afkStart then
                 afkTotal = afkTotal + (now - Data.afkStart)
@@ -294,7 +308,7 @@ function Data.GetTodayTotal(db, characterFilter)
                 startTime = Data.sessionStart,
                 duration = Data.GetSessionDuration(),
                 afkDuration = afkTotal,
-            }, todayMidnight)
+            }, todayStart)
         end
     end
 
@@ -303,7 +317,7 @@ end
 
 function Data.GetDailyAverages(db, characterFilter)
     local now = time()
-    local todayKey = date("%Y-%m-%d", now)
+    local todayKey = GetDayKey(now)
 
     -- rebuild cache if needed
     if cache.dirty or cache.dayKey ~= todayKey
@@ -318,17 +332,17 @@ function Data.GetDailyAverages(db, characterFilter)
     -- add live session to daily totals
     local liveDays = {}
     if Data.isActive and Data.sessionStart then
-        local todayMidnight = GetMidnight(now)
+        local todayStart = GetDayStart(now)
         local sessionDur = Data.GetSessionDuration()
 
-        if Data.sessionStart >= todayMidnight then
+        if Data.sessionStart >= todayStart then
             -- session started today, no split needed
             liveDays[todayKey] = sessionDur
             if not firstDay or todayKey < firstDay then
                 firstDay = todayKey
             end
         else
-            -- session spans midnight, split proportionally
+            -- session started before today, split proportionally
             local afkTotal = Data.afkAccumulated
             if Data.afkStart then
                 afkTotal = afkTotal + (now - Data.afkStart)
@@ -338,8 +352,8 @@ function Data.GetDailyAverages(db, characterFilter)
                 duration = sessionDur,
                 afkDuration = afkTotal,
             }
-            local dayStart = GetMidnight(Data.sessionStart)
-            while dayStart <= todayMidnight do
+            local dayStart = GetDayStart(Data.sessionStart)
+            while dayStart <= todayStart do
                 local portion = SessionDayOverlap(liveSession, dayStart)
                 if portion > 0 then
                     local dk = date("%Y-%m-%d", dayStart)
@@ -364,19 +378,19 @@ function Data.GetDailyAverages(db, characterFilter)
         end
     end
 
-    -- compute overall average across all calendar days since first session
+    -- compute overall average across every day since the first session, today included
     local calendarDays = 1
     if firstDay and firstDay ~= todayKey then
         local fy, fm, fd = firstDay:match("(%d+)-(%d+)-(%d+)")
-        local firstTimestamp = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd) })
-        calendarDays = math.floor((now - firstTimestamp) / 86400) + 1
+        local firstStart = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd), hour = DAY_START_HOUR })
+        calendarDays = math.floor((GetDayStart(now) - firstStart) / 86400 + 0.5) + 1
     end
     local overallAvg = calendarDays > 0 and (totalTime / calendarDays) or 0
 
-    -- compute 7-day average (last 7 calendar days)
+    -- compute 7-day average (today and the six days before it)
     local recentTotal = 0
     for i = 0, 6 do
-        local dk = date("%Y-%m-%d", now - i * 86400)
+        local dk = GetDayKey(now - i * 86400)
         recentTotal = recentTotal + (days[dk] or 0) + (liveDays[dk] or 0)
     end
     local recentAvg = recentTotal / 7
@@ -446,7 +460,7 @@ end
 
 function Data.GetWeeklyTotal(db, characterFilter)
     local now = time()
-    local todayKey = date("%Y-%m-%d", now)
+    local todayKey = GetDayKey(now)
 
     -- rebuild cache if needed
     if cache.dirty or cache.dayKey ~= todayKey
@@ -494,24 +508,21 @@ function Data.GetTotalBetween(db, fromTime, toTime)
     return total
 end
 
--- the most recent calendar day with play before the given midnight: returns that day's midnight and its total
-function Data.GetLastPlayedDay(db, beforeMidnight)
+-- the most recent day with play before the given day start: returns that day's start and its total
+function Data.GetLastPlayedDay(db, beforeDayStart)
     local latest
     for _, session in ipairs(db.global.sessions) do
-        if session.startTime < beforeMidnight and (not latest or session.startTime > latest.startTime) then
+        if session.startTime < beforeDayStart and (not latest or session.startTime > latest.startTime) then
             latest = session
         end
     end
     if not latest then return nil end
 
     local wallEnd = latest.startTime + latest.duration + (latest.afkDuration or 0)
-    local dayStart = GetMidnight(math.min(wallEnd, beforeMidnight - 1))
-    local dayEnd = GetMidnight(dayStart + 36 * 3600) -- the next midnight, whatever daylight saving does
+    local dayStart = GetDayStart(math.min(wallEnd, beforeDayStart - 1))
+    local dayEnd = GetDayStart(dayStart + 36 * 3600) -- the next day start, whatever daylight saving does
     return dayStart, Data.GetTotalBetween(db, dayStart, dayEnd)
 end
-
--- a new "play day" starts at 6 AM, so logging in after midnight still counts as the night before
-local DAY_START_HOUR = 6
 
 -- one chat line for the first login of the play day ("daily") or after the weekly reset ("weekly").
 -- returns nil when there is nothing to say; db.global remembers what has already been reported
@@ -522,7 +533,8 @@ function Data.GetLoginSummary(db, mode)
     local g = db.global
     local format = TPP.Utils.FormatDuration
 
-    local playDay = date("%Y-%m-%d", now - DAY_START_HOUR * 3600)
+    local todayStart = GetDayStart(now)
+    local playDay = date("%Y-%m-%d", todayStart)
     local reset = GetLastWeeklyReset()
     -- resets are a week apart; the margin only guards against the reset time shifting by a few hours
     local weeklyDue = reset - (g.lastWeeklySummary or 0) > 2 * 86400
@@ -562,11 +574,9 @@ function Data.GetLoginSummary(db, mode)
     end
 
     if mode == "daily" then
-        local y, m, d = playDay:match("(%d+)-(%d+)-(%d+)")
-        local dayMidnight = time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 0 })
-        local lastDay, total = Data.GetLastPlayedDay(db, dayMidnight)
+        local lastDay, total = Data.GetLastPlayedDay(db, todayStart)
         if lastDay and total >= 1 then
-            local daysAgo = math.floor((dayMidnight - lastDay) / 86400 + 0.5)
+            local daysAgo = math.floor((todayStart - lastDay) / 86400 + 0.5)
             if daysAgo <= 1 then
                 return "Yesterday you played " .. format(total) .. "."
             elseif daysAgo < 7 then
