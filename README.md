@@ -49,6 +49,9 @@ Export your full session history to a spreadsheet-friendly format for deeper ana
 
 - WoW Retail
 - WoW Forever (beta)
+- WoW Classic Era
+- WoW Burning Crusade Classic (Anniversary)
+- WoW Mists of Pandaria Classic
 
 ## License
 
