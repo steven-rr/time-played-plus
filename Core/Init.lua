@@ -16,6 +16,7 @@ local dbDefaults = {
         },
         scale = 1.0,
         colorTimer = true,
+        summary = "daily",
         positions = {},
     },
 }
@@ -75,6 +76,28 @@ function addon:OnEnable()
         C_Timer.After(10, function()
             RestoreChatTimePlayed()
         end)
+    end)
+
+    -- one quiet line a few seconds after login: a welcome on a new install, otherwise the day's or week's summary
+    C_Timer.After(8, function()
+        local g = TPP.db.global
+        local line
+        if not g.welcomed then
+            g.welcomed = true
+            if #g.sessions == 0 then
+                line = "Now tracking the time you actually play. Type /tpp to see it."
+            end
+        end
+        if not line then
+            line = TPP.Data.GetLoginSummary(TPP.db, TPP.db.profile.summary)
+            if line and not g.summaryHintShown then
+                g.summaryHintShown = true
+                line = line .. " (Change or turn off this line in /tpp options.)"
+            end
+        end
+        if line then
+            print("|cffffd100TimePlayed+|r: " .. line)
+        end
     end)
 
     -- register slash commands

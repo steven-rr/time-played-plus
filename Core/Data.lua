@@ -58,9 +58,17 @@ local function SessionDayOverlap(session, dayStart)
     return session.duration * (overlapEnd - overlapStart) / wallDuration
 end
 
--- Weekly reset: Tuesday 15:00 UTC (10 AM EDT / 7 AM PDT)
+-- Weekly reset: asked from the game so it is right for every region
 local function GetLastWeeklyReset()
     local now = time()
+    local untilReset = C_DateAndTime and C_DateAndTime.GetSecondsUntilWeeklyReset
+        and C_DateAndTime.GetSecondsUntilWeeklyReset()
+    if type(untilReset) == "number" and untilReset > 0 and untilReset <= 7 * 86400 then
+        -- resets land on the hour; rounding keeps the answer steady from one call to the next
+        return math.floor((now + untilReset) / 3600 + 0.5) * 3600 - 7 * 86400
+    end
+
+    -- fallback if the game can't say: the US schedule, Tuesday 15:00 UTC (10 AM EDT / 7 AM PDT)
     local t = date("!*t", now)
     -- wday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
     local daysSinceTuesday = (t.wday - 3) % 7
@@ -471,6 +479,107 @@ function Data.GetWeeklyTotal(db, characterFilter)
     return total
 end
 
+-- active time recorded between two moments, across all characters
+-- (a session that straddles a boundary is split in proportion to its wall-clock time, like the daily totals)
+function Data.GetTotalBetween(db, fromTime, toTime)
+    local total = 0
+    for _, session in ipairs(db.global.sessions) do
+        local wallEnd = session.startTime + session.duration + (session.afkDuration or 0)
+        local overlap = math.min(wallEnd, toTime) - math.max(session.startTime, fromTime)
+        local wallDuration = wallEnd - session.startTime
+        if overlap > 0 and wallDuration > 0 then
+            total = total + session.duration * overlap / wallDuration
+        end
+    end
+    return total
+end
+
+-- the most recent calendar day with play before the given midnight: returns that day's midnight and its total
+function Data.GetLastPlayedDay(db, beforeMidnight)
+    local latest
+    for _, session in ipairs(db.global.sessions) do
+        if session.startTime < beforeMidnight and (not latest or session.startTime > latest.startTime) then
+            latest = session
+        end
+    end
+    if not latest then return nil end
+
+    local wallEnd = latest.startTime + latest.duration + (latest.afkDuration or 0)
+    local dayStart = GetMidnight(math.min(wallEnd, beforeMidnight - 1))
+    local dayEnd = GetMidnight(dayStart + 36 * 3600) -- the next midnight, whatever daylight saving does
+    return dayStart, Data.GetTotalBetween(db, dayStart, dayEnd)
+end
+
+-- a new "play day" starts at 6 AM, so logging in after midnight still counts as the night before
+local DAY_START_HOUR = 6
+
+-- one chat line for the first login of the play day ("daily") or after the weekly reset ("weekly").
+-- returns nil when there is nothing to say; db.global remembers what has already been reported
+function Data.GetLoginSummary(db, mode)
+    if mode ~= "daily" and mode ~= "weekly" then return nil end
+
+    local now = time()
+    local g = db.global
+    local format = TPP.Utils.FormatDuration
+
+    local playDay = date("%Y-%m-%d", now - DAY_START_HOUR * 3600)
+    local reset = GetLastWeeklyReset()
+    -- resets are a week apart; the margin only guards against the reset time shifting by a few hours
+    local weeklyDue = reset - (g.lastWeeklySummary or 0) > 2 * 86400
+
+    if mode == "daily" then
+        if g.lastDailySummary == playDay then return nil end
+        g.lastDailySummary = playDay
+    elseif not weeklyDue then
+        return nil
+    end
+
+    -- once after each reset the weekly line takes the place of the daily one
+    if weeklyDue then
+        g.lastWeeklySummary = reset
+        -- only describe weeks that were tracked from start to finish; a part-week average would mislead
+        local firstSession = math.huge
+        for _, session in ipairs(g.sessions) do
+            if session.startTime < firstSession then firstSession = session.startTime end
+        end
+        local lastWeek = Data.GetTotalBetween(db, reset - 7 * 86400, reset)
+        if lastWeek >= 60 and firstSession < reset - 7 * 86400 then
+            local line = "Last week you played " .. format(lastWeek) .. ", about " .. format(lastWeek / 7) .. " a day."
+            local weekBefore = Data.GetTotalBetween(db, reset - 14 * 86400, reset - 7 * 86400)
+            if weekBefore >= 60 and firstSession < reset - 14 * 86400 then
+                local change = math.floor((lastWeek - weekBefore) / weekBefore * 100 + 0.5)
+                if change <= -100 then change = -99 end -- some time was played, so never "100% less"
+                if change > 0 then
+                    line = line .. " " .. change .. "% more than the week before."
+                elseif change < 0 then
+                    line = line .. " " .. (-change) .. "% less than the week before."
+                else
+                    line = line .. " About the same as the week before."
+                end
+            end
+            return line
+        end
+    end
+
+    if mode == "daily" then
+        local y, m, d = playDay:match("(%d+)-(%d+)-(%d+)")
+        local dayMidnight = time({ year = tonumber(y), month = tonumber(m), day = tonumber(d), hour = 0 })
+        local lastDay, total = Data.GetLastPlayedDay(db, dayMidnight)
+        if lastDay and total >= 1 then
+            local daysAgo = math.floor((dayMidnight - lastDay) / 86400 + 0.5)
+            if daysAgo <= 1 then
+                return "Yesterday you played " .. format(total) .. "."
+            elseif daysAgo < 7 then
+                return "You last played on " .. date("%A", lastDay) .. ", for " .. format(total) .. "."
+            else
+                return "You last played on " .. TPP.Utils.FormatDate(lastDay) .. ", for " .. format(total) .. "."
+            end
+        end
+    end
+
+    return nil
+end
+
 -- Crash recovery via server time cross-check
 local CRASH_THRESHOLD = 600 -- 10 minutes
 local CRASH_MAX_RECOVERY = 28800 -- 8 hours max recovery
@@ -521,6 +630,8 @@ function Data.OnServerTimePlayed(serverTotal, db)
                 }
                 table.insert(db.global.sessions, recoveredSession)
                 Data.InvalidateCache()
+                print("|cffffd100TimePlayed+|r: Found " .. TPP.Utils.FormatDuration(gap)
+                    .. " of play time that wasn't recorded and added it to your history.")
             end
         end
     end

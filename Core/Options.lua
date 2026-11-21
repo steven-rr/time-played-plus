@@ -46,6 +46,16 @@ function Options.GetOptionsTable()
                     end
                 end,
             },
+            summary = {
+                type = "select",
+                name = "Chat Summary",
+                desc = "Daily: one line in chat on your first login of the day (a new day starts at 6 AM) with the time you played yesterday. Weekly: one line after each weekly reset with last week's total.",
+                order = 4,
+                values = { daily = "Daily", weekly = "Weekly", off = "Off" },
+                sorting = { "daily", "weekly", "off" },
+                get = function() return TPP.db.profile.summary end,
+                set = function(_, value) TPP.db.profile.summary = value end,
+            },
             dataSpacer = {
                 type = "header",
                 name = "Data",

@@ -17,6 +17,21 @@ function TPP.Utils.SecondsToHMS(seconds)
     end
 end
 
+-- shorter form for chat lines: no seconds once past a minute
+function TPP.Utils.FormatDuration(seconds)
+    seconds = math.floor(seconds + 0.5)
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+
+    if hours > 0 then
+        return string.format("%dh %dm", hours, minutes)
+    elseif minutes > 0 then
+        return string.format("%dm", minutes)
+    else
+        return string.format("%ds", seconds)
+    end
+end
+
 -- Color scale: green→yellow 0-4h, yellow→red 4-8h, red 8h+
 function TPP.Utils.GetColorForDailyTime(seconds)
     if TPP.db and TPP.db.profile and not TPP.db.profile.colorTimer then
