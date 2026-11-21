@@ -63,6 +63,9 @@ function addon:OnEnable()
     -- start tracking (UnitName/GetRealmName are reliable here)
     TPP.Data.StartSession()
 
+    -- heartbeat: lets Data notice time the game wasn't running (PC sleep, clock jump)
+    C_Timer.NewTicker(60, TPP.Data.Heartbeat)
+
     -- request server time for crash recovery cross-check (delayed to avoid login spam)
     TPP.Data.serverTimeRequested = true
     C_Timer.After(5, function()

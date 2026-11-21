@@ -11,6 +11,23 @@ Data.afkStart = nil
 Data.isActive = false
 Data.character = nil
 Data.serverTimeRequested = false
+Data.lastBeat = nil
+Data.gapAccumulated = 0
+
+-- a gap this long between heartbeats means the addon wasn't running (PC sleep, clock jump)
+local HEARTBEAT_GAP = 300
+
+-- count any such gap as away time; skipped while AFK since the AFK interval already covers it
+local function AccountGap(now)
+    local last = Data.lastBeat
+    Data.lastBeat = now
+    if not last or Data.afkStart then return end
+    local gap = now - last
+    if gap > HEARTBEAT_GAP then
+        Data.afkAccumulated = Data.afkAccumulated + gap
+        Data.gapAccumulated = Data.gapAccumulated + gap
+    end
+end
 
 -- Cache to avoid full session scan every second
 local cache = {
@@ -132,10 +149,18 @@ end
 
 function Data.StartSession()
     Data.sessionStart = time()
+    Data.lastBeat = Data.sessionStart
+    Data.gapAccumulated = 0
     Data.afkAccumulated = 0
     Data.afkStart = nil
     Data.isActive = true
     Data.character = TPP.Utils.GetCharacterKey()
+end
+
+-- called every minute while logged in
+function Data.Heartbeat()
+    if not Data.sessionStart then return end
+    AccountGap(time())
 end
 
 function Data.GetSessionDuration()
@@ -150,11 +175,14 @@ end
 
 function Data.OnAFKStart()
     if not Data.afkStart then
-        Data.afkStart = time()
+        local now = time()
+        AccountGap(now)
+        Data.afkStart = now
     end
 end
 
 function Data.OnAFKEnd()
+    AccountGap(time())
     if Data.afkStart then
         local afkDuration = time() - Data.afkStart
         if afkDuration > 0 then
@@ -168,6 +196,7 @@ function Data.SaveSession(db)
     if not Data.sessionStart then return end
 
     local now = time()
+    AccountGap(now)
     local afkTotal = Data.afkAccumulated
     if Data.afkStart then
         afkTotal = afkTotal + (now - Data.afkStart)
@@ -179,6 +208,7 @@ function Data.SaveSession(db)
         startTime = Data.sessionStart,
         duration = duration,
         afkDuration = afkTotal,
+        gapDuration = Data.gapAccumulated > 0 and Data.gapAccumulated or nil,
         character = Data.character,
     }
 
@@ -191,6 +221,7 @@ function Data.SavePendingSession(db)
     if not Data.sessionStart then return end
 
     local now = time()
+    AccountGap(now)
     local afkTotal = Data.afkAccumulated
     if Data.afkStart then
         afkTotal = afkTotal + (now - Data.afkStart)
@@ -200,6 +231,7 @@ function Data.SavePendingSession(db)
         startTime = Data.sessionStart,
         endTime = now,
         afkAccumulated = afkTotal,
+        gapAccumulated = Data.gapAccumulated > 0 and Data.gapAccumulated or nil,
         character = Data.character,
     }
 end
@@ -215,6 +247,7 @@ function Data.RecoverPendingSession(db)
             startTime = pending.startTime,
             duration = duration,
             afkDuration = pending.afkAccumulated or 0,
+            gapDuration = pending.gapAccumulated,
             character = pending.character or TPP.Utils.GetCharacterKey(),
         }
         table.insert(db.global.sessions, session)
@@ -441,7 +474,8 @@ function Data.OnServerTimePlayed(serverTotal, db)
             local accounted = 0
             for _, session in ipairs(db.global.sessions) do
                 if session.character == character and session.startTime >= checkpoint.timestamp then
-                    accounted = accounted + session.duration + (session.afkDuration or 0)
+                    -- heartbeat-excluded time is not online time, so it must show up as a shortfall if it was real play
+                    accounted = accounted + session.duration + (session.afkDuration or 0) - (session.gapDuration or 0)
                 end
             end
 
