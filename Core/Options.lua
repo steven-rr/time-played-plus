@@ -64,7 +64,7 @@ function Options.GetOptionsTable()
             editHistory = {
                 type = "execute",
                 name = "Edit Session History",
-                desc = "Open the session history with a delete control on each entry. Closing the window turns editing off.",
+                desc = "Open the session history with a delete control on each entry. Every saved session is listed by itself here, reloads included. Closing the window turns editing off.",
                 order = 11,
                 func = function() TPP.HistoryUI.OpenForEdit() end,
             },

@@ -36,6 +36,7 @@ local cache = {
     weeklyPast = 0,
     dailyTotals = nil,
     firstDay = nil,
+    rows = nil,
     dirty = true,
     sessionCount = 0,
     characterFilter = nil,
@@ -160,6 +161,7 @@ local function RebuildCache(db, characterFilter)
     cache.weeklyPast = weeklyPast
     cache.dailyTotals = days
     cache.firstDay = firstDay
+    cache.rows = nil -- built when the History or Stats window asks for them
     cache.dirty = false
     cache.sessionCount = #db.global.sessions
     cache.characterFilter = characterFilter
@@ -454,11 +456,10 @@ end
 function Data.GetLongestSession(db, characterFilter)
     local seasonStart = Data.GetSeasonStart(db)
     local longest = 0
-    for _, session in ipairs(db.global.sessions) do
-        if (not characterFilter or session.character == characterFilter)
-            and (not seasonStart or session.startTime >= seasonStart) then
-            if session.duration > longest then
-                longest = session.duration
+    for _, row in ipairs(Data.GetRows(db, characterFilter)) do
+        if not seasonStart or row.startTime >= seasonStart then
+            if row.duration > longest then
+                longest = row.duration
             end
         end
     end
@@ -475,6 +476,63 @@ function Data.GetSessions(db, characterFilter)
     -- newest first
     table.sort(sessions, function(a, b) return a.startTime > b.startTime end)
     return sessions
+end
+
+-- a break shorter than this does not end a session: a reload or a quick relog carries on with it
+local SESSION_BREAK = 300
+
+-- The lines of the History window, newest first. Saved sessions of one character that follow each
+-- other within SESSION_BREAK are shown as a single line; the saved sessions themselves are not changed.
+-- The break is measured from the end of the earlier one's play time, so time away counts as part
+-- of it: a night of PC sleep never joins two evenings. Time recovered after a crash is an estimate
+-- and keeps a line of its own.
+local function BuildRows(db, characterFilter)
+    local sessions = Data.GetSessions(db, characterFilter)
+    local oldestFirst, open = {}, {}
+    for i = #sessions, 1, -1 do
+        local session = sessions[i]
+        local who = session.character or ""
+        local playEnd = session.startTime + session.duration
+        local row = open[who]
+        if row and not row.recovered and not session.recovered
+            and session.startTime - row.playEnd <= SESSION_BREAK then
+            row.duration = row.duration + session.duration
+            row.playEnd = math.max(row.playEnd, playEnd)
+        else
+            row = {
+                startTime = session.startTime,
+                duration = session.duration,
+                character = session.character,
+                recovered = session.recovered,
+                playEnd = playEnd,
+            }
+            open[who] = row
+            table.insert(oldestFirst, row)
+        end
+    end
+
+    local rows = {}
+    for i = #oldestFirst, 1, -1 do
+        table.insert(rows, oldestFirst[i])
+    end
+    return rows
+end
+
+-- the History lines (see BuildRows), kept until the saved sessions change
+function Data.GetRows(db, characterFilter)
+    local todayKey = GetDayKey(time())
+
+    -- rebuild cache if needed
+    if cache.dirty or cache.dayKey ~= todayKey
+        or cache.sessionCount ~= #db.global.sessions
+        or cache.characterFilter ~= characterFilter then
+        RebuildCache(db, characterFilter)
+    end
+
+    if not cache.rows then
+        cache.rows = BuildRows(db, characterFilter)
+    end
+    return cache.rows
 end
 
 -- remove one session (the same table GetSessions returned); returns true if it was found
@@ -499,7 +557,7 @@ end
 
 function Data.GetCSV(db, characterFilter)
     local lines = { "Date,Start Time,Character,Duration (seconds)" }
-    local sessions = Data.GetSessions(db, characterFilter)
+    local sessions = Data.GetRows(db, characterFilter)
     -- reverse so CSV is chronological
     for i = #sessions, 1, -1 do
         local s = sessions[i]

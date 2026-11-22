@@ -55,6 +55,8 @@ local function SetEditMode(on)
     -- the options panel sits on the HIGH strata; lift the window above it while editing
     historyFrame:SetFrameStrata(on and "DIALOG" or defaultStrata)
     SetArmed(nil)
+    -- the two modes list different things (see Refresh)
+    HistoryUI.Refresh()
 end
 
 function HistoryUI.Create()
@@ -175,7 +177,10 @@ end
 function HistoryUI.Refresh(keepScroll)
     if not historyFrame or not TPP.db then return end
 
-    cachedSessions = Data.GetSessions(TPP.db, TPP.characterFilter)
+    -- normally a reload or a quick relog continues the same line; edit mode lists every saved
+    -- session by itself, so a single one can be removed
+    cachedSessions = editMode and Data.GetSessions(TPP.db, TPP.characterFilter)
+        or Data.GetRows(TPP.db, TPP.characterFilter)
 
     local maxScroll = math.max(0, #cachedSessions - ROWS_VISIBLE)
     scrollOffset = keepScroll and math.min(scrollOffset, maxScroll) or 0

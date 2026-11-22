@@ -19,7 +19,7 @@ A real-time display of your current session. The timer color gradually shifts fr
 See your playtime for today, your daily average, and a rolling 7-day average. Useful for understanding your play habits at a glance. On Retail, the daily average and longest session cover the current season, so last season's numbers don't linger.
 
 **Full Session History**
-A scrollable log of every session — date, start time, duration, and which character you were on. Filter by character to see where your time is going.
+A scrollable log of every session — date, start time, duration, and which character you were on. A reload or a quick relog continues the same session instead of adding a new line. Filter by character to see where your time is going.
 
 **Multi-Character Tracking**
 All characters feed into one unified history. View stats for a single character or see everything together.
