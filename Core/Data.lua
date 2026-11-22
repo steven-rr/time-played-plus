@@ -435,9 +435,10 @@ function Data.GetDailyAverages(db, characterFilter)
 
     -- compute overall average across every day since the first session, today included
     local calendarDays = 1
+    local firstStart = GetDayStart(now)
     if firstDay and firstDay ~= todayKey then
         local fy, fm, fd = firstDay:match("(%d+)-(%d+)-(%d+)")
-        local firstStart = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd), hour = DAY_START_HOUR })
+        firstStart = time({ year = tonumber(fy), month = tonumber(fm), day = tonumber(fd), hour = DAY_START_HOUR })
         calendarDays = math.floor((GetDayStart(now) - firstStart) / 86400 + 0.5) + 1
     end
     local overallAvg = calendarDays > 0 and (totalTime / calendarDays) or 0
@@ -450,7 +451,8 @@ function Data.GetDailyAverages(db, characterFilter)
     end
     local recentAvg = recentTotal / 7
 
-    return overallAvg, recentAvg
+    -- the third value is the start of the first day the overall average counts
+    return overallAvg, recentAvg, firstStart
 end
 
 function Data.GetLongestSession(db, characterFilter)
