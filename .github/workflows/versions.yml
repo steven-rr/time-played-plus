@@ -1,7 +1,8 @@
 name: Game versions
 
 # Once a day, compare the TOC with Blizzard's current game versions.
-# If a number is behind, open an issue that says what to change.
+# If a live version is missing from the TOC, open an issue that says what to change.
+# If a newer version is on a test realm, open an issue that says to test the addon there.
 # Nothing in the repository is changed and nothing is released from here.
 
 on:
@@ -10,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       pretend:
-        description: "Test only: pretend a game version, for example wow_classic_era=1.15.10"
+        description: "Test only: pretend a game version, for example wow_classic_era=1.15.10 (live) or wowt=12.2.0 (test realm)"
         required: false
 
 permissions:
@@ -39,22 +40,27 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
 
       - name: Open or update the issue
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.open == 'true'
         env:
           TITLE: ${{ steps.check.outputs.title }}
           NUMBER: ${{ steps.issue.outputs.number }}
         run: |
           if [ -n "$NUMBER" ]; then
+            before=$(gh issue view "$NUMBER" --json title --jq .title)
             gh issue edit "$NUMBER" --title "$TITLE" --body-file "$RUNNER_TEMP/game_versions.md"
+            # Editing an issue notifies nobody, a comment does. Say so when the news is different.
+            if [ "$before" != "$TITLE" ]; then
+              gh issue comment "$NUMBER" --body "This changed. It is now: $TITLE. The description above has the details."
+            fi
           else
             gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/game_versions.md" --assignee "$GITHUB_REPOSITORY_OWNER"
           fi
 
-      - name: Close the issue once the TOC is up to date
-        if: steps.check.outputs.changed == 'false' && steps.issue.outputs.number != ''
+      - name: Close the issue once nothing is left to change or test
+        if: steps.check.outputs.open == 'false' && steps.issue.outputs.number != ''
         env:
           NUMBER: ${{ steps.issue.outputs.number }}
-        run: gh issue close "$NUMBER" --comment "The TOC is up to date again."
+        run: gh issue close "$NUMBER" --comment "Nothing is left to change or test."
 
       # GitHub pauses scheduled workflows after 60 days without activity in the repository.
       # Re-enabling it on every run keeps this one going.
