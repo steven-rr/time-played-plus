@@ -1,8 +1,8 @@
 name: Game versions
 
 # Once a day, compare the TOC with Blizzard's current game versions.
-# If a live version is missing from the TOC, open an issue that says what to change.
-# If a newer version is on a test realm, open an issue that says to test the addon there.
+# When a newer version appears on a test realm, open an issue that says to test the addon there.
+# When a version goes live, open an issue that says to test it on the live game and what to change.
 # Nothing in the repository is changed and nothing is released from here.
 
 on:

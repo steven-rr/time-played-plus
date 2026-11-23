@@ -1,8 +1,9 @@
 """Keep the TOC's Interface line in step with Blizzard's current game versions.
 
-Run once a day by .github/workflows/versions.yml, which opens an issue when a
-live game version is missing from the TOC, or when a newer version appears on a
-test realm and the addon should be tested there.
+Run once a day by .github/workflows/versions.yml, which opens an issue twice
+for a patch: when it appears on a test realm, to test the addon there and
+release a beta, and again when it goes live, to test it on the live game and
+release it in full.
 
 Run by hand in the repository, it brings the TOC in line with the live game
 versions. A version that is only on a test realm is never added by itself:
@@ -53,6 +54,11 @@ def current_version(product, pretend):
     return tuple(int(part) for part in match.groups()[:3]) if match else None
 
 
+def interface(version):
+    """The number the TOC's Interface line uses for a (major, minor, patch) version."""
+    return version[0] * 10000 + version[1] * 100 + version[2]
+
+
 def live_game_behind(version, realm_of, live):
     """The live game a test realm's version is ahead of, or None when it is ahead of none.
 
@@ -93,27 +99,37 @@ def main():
         if game and version not in ahead.setdefault(game, []):
             ahead[game].append(version)
 
+    # A number the TOC lists that no game uses any more means its game was patched:
+    # the game is the one with the closest live version above that number.
+    in_use = {interface(v) for v in live.values()} | {interface(v) for versions in ahead.values() for v in versions}
+    removed = [n for n in old if n not in in_use]
+    patched = set()
+    for n in removed:
+        was = (n // 10000, n // 100 % 100, n % 100)
+        newer = [p for p in live if live[p][0] == was[0] and live[p] > was]
+        if newer:
+            patched.add(min(newer, key=live.get))
+
     # new: what the TOC should list now. later: the same, once the test realms are tested.
-    new, later, notes, changes, to_test = [], [], [], [], []
+    new, later, notes, arrived, added, to_test = [], [], [], [], [], []
     for product, name, realm_of in PRODUCTS:
         if realm_of:
             continue
         version = live[product]
-        number = version[0] * 10000 + version[1] * 100 + version[2]
+        number = interface(version)
         if number not in new:
             new.append(number)
             later.append(number)
             label = "%s %d.%d.%d" % ((name,) + version)
-            if number in old:
+            if number in old and product not in patched:
                 notes.append("- %s (%d): already listed" % (label, number))
-            elif version[:2] in old_families:
-                notes.append("- **%s (%d): new, a small patch**" % (label, number))
-                changes.append(label)
             else:
-                notes.append("- **%s (%d): new, a bigger update. Test it in game before merging.**" % (label, number))
-                changes.append(label)
+                what = ("live now, listed since it was on a test realm" if number in old else
+                        "new, a small patch" if version[:2] in old_families else "new, a bigger update")
+                notes.append("- **%s (%d): %s. Test it in game before releasing.**" % (label, number, what))
+                arrived.append(label)
         for version in sorted(ahead.get(product, [])):
-            number = version[0] * 10000 + version[1] * 100 + version[2]
+            number = interface(version)
             label = "%s %d.%d.%d" % ((name,) + version)
             size = "a small patch" if version[:2] == live[product][:2] else "a bigger update"
             later.append(number)
@@ -123,18 +139,23 @@ def main():
             elif tested:
                 new.append(number)
                 notes.append("- **%s (%d): on a test realm, %s, added as tested**" % (label, number, size))
-                changes.append(label)
+                added.append(label)
             else:
                 notes.append("- **%s (%d): on a test realm, %s, not live yet. Test the addon there.**"
                              % (label, number, size))
                 to_test.append(label)
-    removed = [n for n in old if n not in new]
     notes += ["- %d: removed, no game version uses it any more" % n for n in removed]
 
     print("TOC lists:      " + ", ".join(map(str, old)))
     print("Blizzard lists: " + ", ".join(map(str, later)))
     changed = set(new) != set(old)
-    parts = [", ".join(changes)] if changes else ["remove " + ", ".join(map(str, removed))] if removed else []
+    parts = []
+    if arrived:
+        parts.append(", ".join(arrived) + (" is live" if len(arrived) == 1 else " are live"))
+    if added:
+        parts.append("add " + ", ".join(added))
+    if not parts and removed:
+        parts.append("remove " + ", ".join(map(str, removed)))
     if to_test:
         parts.append("test " + ", ".join(to_test) + " on the test realm")
     title = "Game versions: " + "; ".join(parts)
@@ -149,14 +170,16 @@ def main():
                  "A newer game version is on a test realm. The addon does not list it until it has been tested there.\n\n")
         body += "\n".join(notes)
         if changed:
-            body += ("\n\nThe Interface line of the TOC should become:\n\n    ## Interface: " + ", ".join(map(str, new))
+            body += ("\n\n" + ("Test the addon on the live game. Once it works there, the" if arrived else "The")
+                     + " Interface line of the TOC should become:\n\n    ## Interface: " + ", ".join(map(str, new))
                      + "\n\nRunning `python .github/scripts/game_versions.py` in the repository makes that change. "
-                       "Players receive it with the next release.")
+                       "Players receive it with the next full release.")
         if to_test:
             body += ("\n\nTest the addon on the test realm. Once it works there, the Interface line should become:\n\n"
                      "    ## Interface: " + ", ".join(map(str, later))
                      + "\n\nRunning `python .github/scripts/game_versions.py --tested` makes that change. "
-                       "Released before the patch goes live, players never see the addon marked out of date.")
+                       "Release it as a beta: a tag with \"beta\" in its name, such as v1.2.3-beta1, is uploaded as a beta. "
+                       "The full release follows once the patch is live and tested there.")
         body += "\n\nThis issue closes by itself once nothing is left to change or test.\n"
         if os.environ.get("RUNNER_TEMP"):
             open(os.path.join(os.environ["RUNNER_TEMP"], "game_versions.md"), "w", encoding="utf-8").write(body)
