@@ -1,13 +1,13 @@
 name: Game versions
 
-# Once a day, compare the TOC with Blizzard's current game versions.
+# Every two hours, compare the TOC with Blizzard's current game versions.
 # When a newer version appears on a test realm, open an issue that says to test the addon there.
 # When a version goes live, open an issue that says to test it on the live game and what to change.
 # Nothing in the repository is changed and nothing is released from here.
 
 on:
   schedule:
-    - cron: "0 17 * * *" # every day at 17:00 UTC (noon US Eastern, 9 AM Pacific, winter time)
+    - cron: "23 */2 * * *" # every two hours, at 23 past. GitHub starts scheduled runs late, by hours when they are set on the hour
   workflow_dispatch:
     inputs:
       pretend:

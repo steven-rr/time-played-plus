@@ -1,6 +1,6 @@
 """Keep the TOC's Interface line in step with Blizzard's current game versions.
 
-Run once a day by .github/workflows/versions.yml, which opens an issue twice
+Run every two hours by .github/workflows/versions.yml, which opens an issue twice
 for a patch: when it appears on a test realm, to test the addon there and
 release a beta, and again when it goes live, to test it on the live game and
 release it in full.
