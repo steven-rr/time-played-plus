@@ -29,6 +29,17 @@ local function AccountGap(now)
     end
 end
 
+-- Online time that will never be a saved session (one too short to keep, or one the player deleted)
+-- is counted as settled in the server check, otherwise the next login would add it as a recovered session.
+-- Only needed if the server check hasn't moved past that time yet.
+local function SettleOnlineTime(db, character, startTime, seconds)
+    local checkpoint = db.global.serverCheckpoints and db.global.serverCheckpoints[character]
+    if checkpoint and checkpoint.serverTotal and checkpoint.timestamp
+        and startTime >= checkpoint.timestamp and seconds > 0 then
+        checkpoint.serverTotal = checkpoint.serverTotal + seconds
+    end
+end
+
 -- Cache to avoid full session scan every second
 local cache = {
     dayKey = nil,
@@ -266,7 +277,11 @@ function Data.SaveSession(db)
         afkTotal = afkTotal + (now - Data.afkStart)
     end
     local duration = now - Data.sessionStart - afkTotal
-    if duration < 5 then return end -- don't save trivially short sessions
+    if duration < 5 then
+        -- don't save trivially short sessions, but the time online (mostly AFK) still happened
+        SettleOnlineTime(db, Data.character, Data.sessionStart, duration + afkTotal - Data.gapAccumulated)
+        return
+    end
 
     local session = {
         startTime = Data.sessionStart,
@@ -316,6 +331,10 @@ function Data.RecoverPendingSession(db)
         }
         table.insert(db.global.sessions, session)
         Data.InvalidateCache()
+    else
+        -- too short to keep, but the time online (mostly AFK) still happened
+        SettleOnlineTime(db, pending.character or TPP.Utils.GetCharacterKey(), pending.startTime,
+            duration + (pending.afkAccumulated or 0) - (pending.gapAccumulated or 0))
     end
 
     db.global.pendingSession = nil
@@ -542,14 +561,8 @@ function Data.DeleteSession(db, session)
     for i, s in ipairs(db.global.sessions) do
         if s == session then
             table.remove(db.global.sessions, i)
-            -- if the server check hasn't moved past this session yet, count its time as settled,
-            -- otherwise the next login would add it back as a recovered session
-            local checkpoint = db.global.serverCheckpoints and db.global.serverCheckpoints[session.character]
-            if checkpoint and checkpoint.serverTotal and checkpoint.timestamp
-                and session.startTime >= checkpoint.timestamp then
-                checkpoint.serverTotal = checkpoint.serverTotal + session.duration
-                    + (session.afkDuration or 0) - (session.gapDuration or 0)
-            end
+            SettleOnlineTime(db, session.character, session.startTime,
+                session.duration + (session.afkDuration or 0) - (session.gapDuration or 0))
             Data.InvalidateCache()
             return true
         end
