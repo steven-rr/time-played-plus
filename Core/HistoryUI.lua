@@ -201,14 +201,19 @@ function HistoryUI.UpdateRows()
 
         if session then
             row.date:SetText(Utils.FormatDate(session.startTime))
-            row.time:SetText(Utils.FormatTime(session.startTime))
+            -- time found by the /played check has no known start: say what the line is, not a guessed time
+            row.time:SetText(session.recovered and "recovered" or Utils.FormatTime(session.startTime))
             row.duration:SetText(Utils.SecondsToHMS(session.duration))
             row.character:SetText(session.character)
 
             local r, g, b = Utils.GetColorForDailyTime(session.duration)
             row.duration:SetTextColor(r, g, b)
             row.date:SetTextColor(1, 1, 1)
-            row.time:SetTextColor(1, 1, 1)
+            if session.recovered then
+                row.time:SetTextColor(0.6, 0.6, 0.6)
+            else
+                row.time:SetTextColor(1, 1, 1)
+            end
             row.character:SetTextColor(1, 1, 1)
 
             row.date:Show()

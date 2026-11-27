@@ -748,8 +748,9 @@ function Data.OnServerTimePlayed(serverTotal, db)
 
             local gap = serverDiff - accounted
             if gap >= CRASH_THRESHOLD and gap < CRASH_MAX_RECOVERY then
-                -- unaccounted time — likely a crashed session
-                -- estimate start time: use the latest session end for this character, or checkpoint time
+                -- unaccounted time — likely a crashed session. Its real start is lost with the crash:
+                -- it began no earlier than the latest session end for this character (or the checkpoint
+                -- time), and it most likely ended shortly before this login, so that is where it is placed
                 local latestEnd = checkpoint.timestamp
                 for _, session in ipairs(db.global.sessions) do
                     if session.character == character then
@@ -760,7 +761,7 @@ function Data.OnServerTimePlayed(serverTotal, db)
                     end
                 end
                 local recoveredSession = {
-                    startTime = latestEnd,
+                    startTime = math.max(latestEnd, (Data.sessionStart or time()) - gap),
                     duration = gap,
                     afkDuration = 0,
                     character = character,
@@ -769,7 +770,8 @@ function Data.OnServerTimePlayed(serverTotal, db)
                 table.insert(db.global.sessions, recoveredSession)
                 Data.InvalidateCache()
                 print("|cffffd100TimePlayed+|r: Found " .. TPP.Utils.FormatDuration(gap)
-                    .. " of play time that wasn't recorded and added it to your history.")
+                    .. " of play time that wasn't recorded and added it to History as \"recovered\"."
+                    .. " If you weren't playing, remove it in /tpp options.")
             end
         end
     end
